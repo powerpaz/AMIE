@@ -2,8 +2,8 @@
 // Reemplaza con tu URL y KEY (public anon) — o usa variables de entorno en GitHub Pages/Netlify.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = window.env?.SUPABASE_URL || "https://YOUR-PROJECT.supabase.co";
-const SUPABASE_KEY = window.env?.SUPABASE_KEY || "YOUR-ANON-KEY";
+const SUPABASE_URL = window.env?.SUPABASE_URL || "https://krjwqagkjuzrpxianvnu.supabase.co";
+const SUPABASE_KEY = window.env?.SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ";
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Nombre de la tabla en Supabase
