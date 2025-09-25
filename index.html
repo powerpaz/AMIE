@@ -1,22 +1,37 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Geoportal — Instituciones Educativas</title>
-  <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- App -->
   <script type="module" src="app.js"></script>
 </head>
 <body>
   <header>
     <h1>Geoportal — Instituciones Educativas</h1>
+
     <div class="search-row">
-      <input id="amieInput" placeholder="Buscar por AMIE o nombre">
+      <input id="amieInput" placeholder="Buscar por AMIE o nombre" />
       <button id="searchBtn">Buscar</button>
     </div>
+
+    <button id="themeToggle" class="ghost-btn" title="Cambiar tema">🌙</button>
   </header>
+
   <main>
     <section class="dashboard">
       <div class="card"><div class="kpi-label">Instituciones</div><div id="kpiTotal" class="kpi-value">—</div></div>
@@ -24,6 +39,7 @@
       <div class="card"><div class="kpi-label">Establecimiento</div><div id="kpiEst" class="kpi-value">—</div></div>
       <div class="card"><div class="kpi-label">Sostenimientos</div><div id="kpiSost" class="kpi-value">—</div></div>
     </section>
+
     <section class="filters">
       <select id="provSelect"><option value="">Provincia</option></select>
       <select id="cantSelect"><option value="">Cantón</option></select>
@@ -36,8 +52,10 @@
       </select>
       <button id="clearBtn">Limpiar</button>
     </section>
+
     <section class="content">
       <div id="map"></div>
+
       <div class="table-wrap">
         <table id="tbl">
           <thead>
@@ -48,6 +66,17 @@
           </thead>
           <tbody></tbody>
         </table>
+
+        <div class="pagination">
+          <button id="prevPage" class="ghost-btn">◀</button>
+          <span id="pageInfo">Página 1/1</span>
+          <button id="nextPage" class="ghost-btn">▶</button>
+          <select id="pageSize">
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
       </div>
     </section>
   </main>
