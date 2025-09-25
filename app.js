@@ -18,14 +18,17 @@ const tipoSelect = document.getElementById("tipoSelect");
 const amieInput = document.getElementById("amieInput");
 const searchBtn = document.getElementById("searchBtn");
 const clearBtn = document.getElementById("clearBtn");
+const themeToggle = document.getElementById("themeToggle");
 const tbody = document.querySelector("#tbl tbody");
-const pageSizeSel = document.getElementById?.("pageSize");
-const prevPageBtn = document.getElementById?.("prevPage");
-const nextPageBtn = document.getElementById?.("nextPage");
-const pageInfo = document.getElementById?.("pageInfo");
+const prevPageBtn = document.getElementById("prevPage");
+const nextPageBtn = document.getElementById("nextPage");
+const pageInfo = document.getElementById("pageInfo");
+const pageSizeSel = document.getElementById("pageSize");
 
 // ======= MAPA =======
 let map = L.map("map", { zoomControl:true }).setView([-1.8312, -78.1834], 6);
+
+// Base layers
 const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19, attribution: "&copy; OpenStreetMap"
 }).addTo(map);
@@ -35,26 +38,27 @@ const esriSat = L.tileLayer(
 );
 L.control.layers({ "OSM": osm, "Satélite (Esri)": esriSat }, {}, { collapsed:true }).addTo(map);
 
-// Cluster + red dot
+// Cluster layer + red dot icon
 let clusterLayer = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:50 });
 map.addLayer(clusterLayer);
 const redDotIcon = L.divIcon({ className:"red-dot", html:"", iconSize:[10,10] });
 
-// ======= COORDS BAR (sin plugin, nativo) =======
+// ======= Barra de coordenadas / Plugin =======
 const coordsBar = document.getElementById("coordsBar");
 function fmt(n){ return (Math.round(n*1e6)/1e6).toFixed(6); }
 map.on("mousemove", (e)=>{ coordsBar.textContent = `Lat: ${fmt(e.latlng.lat)}  Lon: ${fmt(e.latlng.lng)} (click para copiar)`; });
-coordsBar?.addEventListener("click", ()=>{
-  navigator.clipboard?.writeText(coordsBar.textContent.replace(" (click para copiar)",""));
+coordsBar.addEventListener("click", ()=> {
+  const txt = coordsBar.textContent.replace(" (click para copiar)","");
+  navigator.clipboard?.writeText(txt);
 });
 
-// (si quieres usar tu plugin latlontools real en lugar de la barra nativa, descomenta esto)
-// if (window.LatLonTools) { LatLonTools.addTo(map); }
+// Si subiste tu plugin latlontools y expone LatLonTools.addTo(map), lo activamos sin romper si no existe
+try { if (window.LatLonTools && typeof window.LatLonTools.addTo === "function") { window.LatLonTools.addTo(map); } } catch(e){ /* noop */ }
 
-// ======= STATE =======
+// ======= STATE (tabla) =======
 let currentData = [];
 let currentPage = 1;
-let pageSize = parseInt(pageSizeSel?.value || "25", 10) || 25;
+let pageSize = parseInt(pageSizeSel.value, 10) || 25;
 
 // ======= HELPERS =======
 function applyFilters(q){
@@ -65,11 +69,10 @@ function applyFilters(q){
   if(tipoSelect.value) q = q.eq("tipo", tipoSelect.value);
   return q;
 }
-
 function uniqueClean(values){
-  return [...new Set(values.map(v => (v ?? "").toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+  return [...new Set(values.map(v => (v ?? "").toString().trim()).filter(Boolean))]
+         .sort((a,b)=>a.localeCompare(b,'es'));
 }
-
 async function getDistinct(field){
   const { data, error } = await supabase
     .from(TABLE)
@@ -82,13 +85,11 @@ async function getDistinct(field){
   return uniqueClean((data||[]).map(r => r[field]));
 }
 
-// ======= LOAD FILTER OPTIONS =======
-// Provincia desde GeoJSON + fallback Supabase (unión de ambos)
+// ======= Filtros =======
 async function loadProvincesFromGeoJSON(){
   try{
     const res = await fetch("provincias.geojson", { cache:"no-store" });
     const gj = await res.json();
-    // intenta estas propiedades comunes
     const names = gj.features.map(f =>
       (f.properties.DPA_DESPRO || f.properties.nombre || f.properties.NAME_1 || f.properties.provincia || "").toString().trim()
     );
@@ -100,16 +101,16 @@ async function loadProvincesFromGeoJSON(){
 }
 
 async function loadFilterOptions(){
-  // Provincias
+  // Provincias: catálogo + DB (unión)
   const [provGeo, provDb] = await Promise.all([loadProvincesFromGeoJSON(), getDistinct("provincia")]);
   const provAll = uniqueClean([...provGeo, ...provDb]);
   provAll.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; provSelect.appendChild(o); });
 
-  // Cantones / Parroquias desde DB (limpios)
+  // Cantón / Parroquia desde DB
   (await getDistinct("canton")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; cantSelect.appendChild(o); });
   (await getDistinct("parroquia")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; parrSelect.appendChild(o); });
 
-  // Sostenimiento desde DB, orden preferente
+  // Sostenimiento (orden preferente)
   const sost = (await getDistinct("sostenimiento")).map(s => s.toUpperCase());
   const order = ["FISCAL","FISCOMISIONAL","PARTICULAR","MUNICIPAL"];
   const seen = new Set();
@@ -133,16 +134,22 @@ async function updateKPIs(){
   if(!es){ const setS = new Set((ds||[]).map(r => (r.sostenimiento||"").toString().trim()).filter(Boolean)); kpiSost.textContent = setS.size.toString(); }
 }
 
-// ======= QUERY + RENDER =======
+// ======= DATA + RENDER =======
 async function refreshData(){
-  let q = supabase.from(TABLE).select("amie,nombre_ie,tipo,sostenimiento,provincia,canton,parroquia,lat,lon").limit(5000);
+  let q = supabase.from(TABLE)
+    .select("amie,nombre_ie,tipo,sostenimiento,provincia,canton,parroquia,lat,lon")
+    .limit(5000);
   q = applyFilters(q);
 
   const term = amieInput.value.trim();
-  if(term){ /^[0-9A-Z]+$/.test(term) ? q = q.ilike("amie", `%${term}%`) : q = q.ilike("nombre_ie", `%${term}%`); }
+  if(term){
+    if(/^[0-9A-Z]+$/.test(term)) q = q.ilike("amie", `%${term}%`);
+    else q = q.ilike("nombre_ie", `%${term}%`);
+  }
 
   const { data, error } = await q;
   if(error){ console.error(error); return; }
+
   currentData = data || [];
   currentPage = 1;
 
@@ -154,62 +161,71 @@ async function refreshData(){
 function renderMap(rows){
   clusterLayer.clearLayers();
   const pts = [];
-  rows.filter(r => typeof r.lat==="number" && typeof r.lon==="number" && !Number.isNaN(r.lat) && !Number.isNaN(r.lon))
-      .forEach(r => {
-        const m = L.marker([r.lat, r.lon], { icon: redDotIcon })
-          .bindPopup(`<b>${r.nombre_ie||""}</b><br>AMIE: ${r.amie||""}<br>${r.provincia||""} / ${r.canton||""}`);
-        clusterLayer.addLayer(m);
-        pts.push([r.lat, r.lon]);
-      });
+  rows
+    .filter(r => typeof r.lat==="number" && typeof r.lon==="number" && !Number.isNaN(r.lat) && !Number.isNaN(r.lon))
+    .forEach(r => {
+      const m = L.marker([r.lat, r.lon], { icon: redDotIcon })
+        .bindPopup(`<b>${r.nombre_ie||""}</b><br>AMIE: ${r.amie||""}<br>${r.provincia||""} / ${r.canton||""}`);
+      clusterLayer.addLayer(m);
+      pts.push([r.lat, r.lon]);
+    });
   if(pts.length){ map.fitBounds(L.latLngBounds(pts).pad(0.2)); }
 }
 
 function renderTablePage(){
-  if(!pageSizeSel){ // si tu template no tiene paginación, render simple
-    tbody.innerHTML = "";
-    (currentData||[]).forEach(r=>{
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${r.amie||""}</td><td>${r.nombre_ie||""}</td><td>${r.tipo||""}</td>
-                      <td>${r.sostenimiento||""}</td><td>${r.provincia||""}</td><td>${r.canton||""}</td><td>${r.parroquia||""}</td>`;
-      tbody.appendChild(tr);
-    });
-    return;
-  }
   const total = currentData.length;
-  pageSize = parseInt(pageSizeSel.value,10)||25;
+  pageSize = parseInt(pageSizeSel.value, 10) || 25;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  currentPage = Math.min(Math.max(1,currentPage), pageCount);
-  const start = (currentPage-1)*pageSize;
-  const slice = currentData.slice(start, start+pageSize);
+  currentPage = Math.min(Math.max(1, currentPage), pageCount);
+
+  const start = (currentPage - 1) * pageSize;
+  const slice = currentData.slice(start, start + pageSize);
 
   tbody.innerHTML = "";
-  slice.forEach(r=>{
+  slice.forEach(r => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${r.amie||""}</td><td>${r.nombre_ie||""}</td><td>${r.tipo||""}</td>
-                    <td>${r.sostenimiento||""}</td><td>${r.provincia||""}</td><td>${r.canton||""}</td><td>${r.parroquia||""}</td>`;
+    tr.innerHTML = `<td>${r.amie||""}</td>
+                    <td>${r.nombre_ie||""}</td>
+                    <td>${r.tipo||""}</td>
+                    <td>${r.sostenimiento||""}</td>
+                    <td>${r.provincia||""}</td>
+                    <td>${r.canton||""}</td>
+                    <td>${r.parroquia||""}</td>`;
     tbody.appendChild(tr);
   });
 
   pageInfo.textContent = `Página ${currentPage}/${pageCount}`;
-  prevPageBtn.disabled = currentPage<=1;
-  nextPageBtn.disabled = currentPage>=pageCount;
+  prevPageBtn.disabled = currentPage <= 1;
+  nextPageBtn.disabled = currentPage >= pageCount;
 }
 
-// ======= EVENTS =======
+// ======= EVENTOS =======
 searchBtn.addEventListener("click", refreshData);
-clearBtn.addEventListener("click", ()=>{
-  provSelect.value=""; cantSelect.value=""; parrSelect.value=""; sostSelect.value=""; tipoSelect.value="";
-  amieInput.value=""; refreshData();
+clearBtn.addEventListener("click", () => {
+  provSelect.value = ""; cantSelect.value = ""; parrSelect.value = ""; sostSelect.value = ""; tipoSelect.value = "";
+  amieInput.value = "";
+  refreshData();
 });
 [provSelect,cantSelect,parrSelect,sostSelect,tipoSelect].forEach(el => el.addEventListener("change", refreshData));
 
-prevPageBtn?.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
-nextPageBtn?.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
-pageSizeSel?.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
+prevPageBtn.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
+nextPageBtn.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
+pageSizeSel.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
+
+// Tema oscuro persistente
+(function initTheme(){
+  const saved = localStorage.getItem("theme");
+  if(saved === "dark") document.body.classList.add("dark");
+  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+})();
+themeToggle.addEventListener("click", ()=>{
+  document.body.classList.toggle("dark");
+  localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+});
 
 // ======= INIT =======
 (async function init(){
   await loadFilterOptions();
   await refreshData();
 })();
-
