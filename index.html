@@ -1,397 +1,94 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Instituciones Educativas</title>
-    
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Leaflet MarkerCluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    
-    <!-- Plugin latlontools (opcional) -->
-    <link rel="stylesheet" href="latlontools/latlontools.css" />
-    
-    <!-- Preload del catálogo oficial -->
-    <link rel="preload" href="provincias.geojson" as="fetch" crossorigin>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome para iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 0;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .kpi-card {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #667eea;
-            transition: transform 0.2s;
-        }
-        
-        .kpi-card:hover {
-            transform: translateY(-2px);
-        }
-        
-        .kpi-number {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 0.5rem;
-        }
-        
-        .kpi-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .filters-section {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            margin-bottom: 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .map-container {
-            background: white;
-            border-radius: 10px;
-            padding: 1rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-            position: relative;
-        }
-        
-        #map {
-            height: 500px;
-            border-radius: 8px;
-        }
-        
-        .table-container {
-            background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        
-        .table th {
-            background-color: #f8f9fa;
-            border-top: none;
-            font-weight: 600;
-            color: #495057;
-        }
-        
-        .table tbody tr:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .pagination-controls {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-top: 1rem;
-            gap: 1rem;
-        }
-        
-        .coords-bar {
-            position: absolute;
-            bottom: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 5px;
-            font-size: 0.85rem;
-            cursor: pointer;
-            z-index: 1000;
-            transition: background-color 0.2s;
-        }
-        
-        .coords-bar:hover {
-            background: rgba(0,0,0,0.9);
-        }
-        
-        .red-dot {
-            background-color: #dc3545;
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 5px rgba(0,0,0,0.3);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-        }
-        
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-        }
-        
-        .section-title {
-            color: #495057;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #e9ecef;
-        }
-        
-        @media (max-width: 768px) {
-            .kpi-card {
-                margin-bottom: 1rem;
-            }
-            
-            #map {
-                height: 350px;
-            }
-            
-            .table-responsive {
-                font-size: 0.85rem;
-            }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Geoportal — Instituciones Educativas</title>
+
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- (Opcional) Plugin de coordenadas (si subes /latlontools/ al repo) -->
+  <link rel="stylesheet" href="latlontools/latlontools.css" onerror="this.remove()" />
+  <script src="latlontools/latlontools.js" onerror="this.remove()"></script>
+
+  <!-- App -->
+  <script type="module" src="app.js"></script>
+
+  <!-- Preload del catálogo oficial -->
+  <link rel="preload" href="provincias.geojson" as="fetch" crossorigin>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h1 class="mb-0">
-                        <i class="fas fa-school me-2"></i>
-                        Dashboard de Instituciones Educativas
-                    </h1>
-                    <p class="mb-0 mt-1 opacity-75">Sistema de análisis de presencia institucional en territorio</p>
-                </div>
-            </div>
+  <header>
+    <h1>Geoportal — Instituciones Educativas</h1>
+
+    <div class="search-row">
+      <input id="amieInput" placeholder="Buscar por AMIE o nombre" />
+      <button id="searchBtn">Buscar</button>
+    </div>
+
+    <button id="themeToggle" class="ghost-btn" title="Cambiar tema">🌙</button>
+  </header>
+
+  <main>
+    <section class="dashboard">
+      <div class="card"><div class="kpi-label">Instituciones</div><div id="kpiTotal" class="kpi-value">—</div></div>
+      <div class="card"><div class="kpi-label">Matriz</div><div id="kpiMatriz" class="kpi-value">—</div></div>
+      <div class="card"><div class="kpi-label">Establecimiento</div><div id="kpiEst" class="kpi-value">—</div></div>
+      <div class="card"><div class="kpi-label">Sostenimientos</div><div id="kpiSost" class="kpi-value">—</div></div>
+    </section>
+
+    <section class="filters">
+      <select id="provSelect"><option value="">Provincia</option></select>
+      <select id="cantSelect"><option value="">Cantón</option></select>
+      <select id="parrSelect"><option value="">Parroquia</option></select>
+      <select id="sostSelect"><option value="">Sostenimiento</option></select>
+      <select id="tipoSelect">
+        <option value="">Tipo</option>
+        <option value="MATRIZ">MATRIZ</option>
+        <option value="ESTABLECIMIENTO">ESTABLECIMIENTO</option>
+      </select>
+      <button id="clearBtn">Limpiar</button>
+    </section>
+
+    <section class="content">
+      <div id="map"></div>
+
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>AMIE</th><th>Nombre</th><th>Tipo</th>
+              <th>Sostenimiento</th><th>Provincia</th><th>Cantón</th><th>Parroquia</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <div class="pagination">
+          <button id="prevPage" class="ghost-btn">◀</button>
+          <span id="pageInfo">Página 1/1</span>
+          <button id="nextPage" class="ghost-btn">▶</button>
+          <select id="pageSize">
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
         </div>
-    </header>
+      </div>
+    </section>
 
-    <main class="container-fluid">
-        <!-- KPIs Section -->
-        <section class="row mb-4">
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="kpi-card">
-                    <div class="kpi-number" id="kpiTotal">0</div>
-                    <div class="kpi-label">
-                        <i class="fas fa-building me-1"></i>
-                        Total Instituciones
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="kpi-card">
-                    <div class="kpi-number" id="kpiMatriz">0</div>
-                    <div class="kpi-label">
-                        <i class="fas fa-university me-1"></i>
-                        Matrices
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="kpi-card">
-                    <div class="kpi-number" id="kpiEst">0</div>
-                    <div class="kpi-label">
-                        <i class="fas fa-school me-1"></i>
-                        Establecimientos
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="kpi-card">
-                    <div class="kpi-number" id="kpiSost">0</div>
-                    <div class="kpi-label">
-                        <i class="fas fa-chart-pie me-1"></i>
-                        Tipos Sostenimiento
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Filters Section -->
-        <section class="filters-section">
-            <h3 class="section-title">
-                <i class="fas fa-filter me-2"></i>
-                Filtros de Búsqueda
-            </h3>
-            <div class="row">
-                <!-- Búsqueda por texto -->
-                <div class="col-md-4 mb-3">
-                    <label for="amieInput" class="form-label">Buscar por AMIE o Nombre</label>
-                    <div class="input-group">
-                        <span class="input-group-text">
-                            <i class="fas fa-search"></i>
-                        </span>
-                        <input type="text" class="form-control" id="amieInput" 
-                               placeholder="Ingrese AMIE o nombre de institución">
-                    </div>
-                </div>
-                
-                <!-- Filtros geográficos -->
-                <div class="col-md-2 mb-3">
-                    <label for="provSelect" class="form-label">Provincia</label>
-                    <select class="form-select" id="provSelect">
-                        <option value="">Todas las provincias</option>
-                    </select>
-                </div>
-                
-                <div class="col-md-2 mb-3">
-                    <label for="cantSelect" class="form-label">Cantón</label>
-                    <select class="form-select" id="cantSelect">
-                        <option value="">Todos los cantones</option>
-                    </select>
-                </div>
-                
-                <div class="col-md-2 mb-3">
-                    <label for="parrSelect" class="form-label">Parroquia</label>
-                    <select class="form-select" id="parrSelect">
-                        <option value="">Todas las parroquias</option>
-                    </select>
-                </div>
-                
-                <!-- Filtros institucionales -->
-                <div class="col-md-2 mb-3">
-                    <label for="sostSelect" class="form-label">Sostenimiento</label>
-                    <select class="form-select" id="sostSelect">
-                        <option value="">Todos los tipos</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-2 mb-3">
-                    <label for="tipoSelect" class="form-label">Tipo</label>
-                    <select class="form-select" id="tipoSelect">
-                        <option value="">Todos los tipos</option>
-                        <option value="MATRIZ">Matriz</option>
-                        <option value="ESTABLECIMIENTO">Establecimiento</option>
-                    </select>
-                </div>
-                
-                <!-- Botones de acción -->
-                <div class="col-md-10 mb-3 d-flex align-items-end gap-2">
-                    <button type="button" class="btn btn-primary" id="searchBtn">
-                        <i class="fas fa-search me-1"></i>
-                        Buscar
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" id="clearBtn">
-                        <i class="fas fa-times me-1"></i>
-                        Limpiar
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Map Section -->
-        <section class="map-container">
-            <h3 class="section-title">
-                <i class="fas fa-map-marked-alt me-2"></i>
-                Mapa de Instituciones
-            </h3>
-            <div id="map"></div>
-            <!-- Barra de coordenadas -->
-            <div id="coordsBar" class="coords-bar">Lat: —  Lon: — (click para copiar)</div>
-        </section>
-
-        <!-- Table Section -->
-        <section class="table-container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="section-title mb-0">
-                    <i class="fas fa-table me-2"></i>
-                    Listado de Instituciones
-                </h3>
-                <div class="d-flex align-items-center gap-2">
-                    <label for="pageSize" class="form-label mb-0 text-nowrap">Filas por página:</label>
-                    <select class="form-select form-select-sm" id="pageSize" style="width: auto;">
-                        <option value="10">10</option>
-                        <option value="25" selected>25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="table-responsive">
-                <table class="table table-hover" id="tbl">
-                    <thead>
-                        <tr>
-                            <th>AMIE</th>
-                            <th>Nombre Institución</th>
-                            <th>Tipo</th>
-                            <th>Sostenimiento</th>
-                            <th>Provincia</th>
-                            <th>Cantón</th>
-                            <th>Parroquia</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Los datos se cargan dinámicamente -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Controles de paginación -->
-            <div class="pagination-controls">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-outline-primary btn-sm" id="prevPage">
-                        <i class="fas fa-chevron-left me-1"></i>
-                        Anterior
-                    </button>
-                    <span class="text-muted" id="pageInfo">Página 1/1</span>
-                    <button class="btn btn-outline-primary btn-sm" id="nextPage">
-                        Siguiente
-                        <i class="fas fa-chevron-right ms-1"></i>
-                    </button>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-light text-center py-3 mt-5">
-        <div class="container">
-            <p class="mb-0 text-muted">
-                <i class="fas fa-copyright me-1"></i>
-                2025 Dashboard de Instituciones Educativas - Sistema APIT
-            </p>
-        </div>
-    </footer>
-
-    <!-- Scripts -->
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <!-- Leaflet MarkerCluster JS -->
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-    
-    <!-- Plugin latlontools (opcional) -->
-    <script src="latlontools/latlontools.js"></script>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Tu script principal -->
-    <script type="module" src="app.js"></script>
+    <!-- Visor de coordenadas -->
+    <div id="coordsBar" class="coords-bar">Lat: —  Lon: — (click para copiar)</div>
+  </main>
 </body>
 </html>
