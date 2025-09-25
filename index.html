@@ -1,214 +1,397 @@
-// ======= SUPABASE =======
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-const SUPABASE_URL = "https://krjwqagkjuzrpxianvnu.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ";
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-const TABLE = "instituciones";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Instituciones Educativas</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    
+    <!-- Plugin latlontools (opcional) -->
+    <link rel="stylesheet" href="latlontools/latlontools.css" />
+    
+    <!-- Preload del catálogo oficial -->
+    <link rel="preload" href="provincias.geojson" as="fetch" crossorigin>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .kpi-card {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+        
+        .kpi-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .kpi-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .kpi-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filters-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .map-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        
+        #map {
+            height: 500px;
+            border-radius: 8px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .pagination-controls {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-top: 1rem;
+            gap: 1rem;
+        }
+        
+        .coords-bar {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            z-index: 1000;
+            transition: background-color 0.2s;
+        }
+        
+        .coords-bar:hover {
+            background: rgba(0,0,0,0.9);
+        }
+        
+        .red-dot {
+            background-color: #dc3545;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+        
+        .section-title {
+            color: #495057;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        @media (max-width: 768px) {
+            .kpi-card {
+                margin-bottom: 1rem;
+            }
+            
+            #map {
+                height: 350px;
+            }
+            
+            .table-responsive {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h1 class="mb-0">
+                        <i class="fas fa-school me-2"></i>
+                        Dashboard de Instituciones Educativas
+                    </h1>
+                    <p class="mb-0 mt-1 opacity-75">Sistema de análisis de presencia institucional en territorio</p>
+                </div>
+            </div>
+        </div>
+    </header>
 
-// ======= UI =======
-const kpiTotal = document.getElementById("kpiTotal");
-const kpiMatriz = document.getElementById("kpiMatriz");
-const kpiEst = document.getElementById("kpiEst");
-const kpiSost = document.getElementById("kpiSost");
-const provSelect = document.getElementById("provSelect");
-const cantSelect = document.getElementById("cantSelect");
-const parrSelect = document.getElementById("parrSelect");
-const sostSelect = document.getElementById("sostSelect");
-const tipoSelect = document.getElementById("tipoSelect");
-const amieInput = document.getElementById("amieInput");
-const searchBtn = document.getElementById("searchBtn");
-const clearBtn = document.getElementById("clearBtn");
-const tbody = document.querySelector("#tbl tbody");
-const pageSizeSel = document.getElementById?.("pageSize");
-const prevPageBtn = document.getElementById?.("prevPage");
-const nextPageBtn = document.getElementById?.("nextPage");
-const pageInfo = document.getElementById?.("pageInfo");
+    <main class="container-fluid">
+        <!-- KPIs Section -->
+        <section class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="kpi-card">
+                    <div class="kpi-number" id="kpiTotal">0</div>
+                    <div class="kpi-label">
+                        <i class="fas fa-building me-1"></i>
+                        Total Instituciones
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="kpi-card">
+                    <div class="kpi-number" id="kpiMatriz">0</div>
+                    <div class="kpi-label">
+                        <i class="fas fa-university me-1"></i>
+                        Matrices
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="kpi-card">
+                    <div class="kpi-number" id="kpiEst">0</div>
+                    <div class="kpi-label">
+                        <i class="fas fa-school me-1"></i>
+                        Establecimientos
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="kpi-card">
+                    <div class="kpi-number" id="kpiSost">0</div>
+                    <div class="kpi-label">
+                        <i class="fas fa-chart-pie me-1"></i>
+                        Tipos Sostenimiento
+                    </div>
+                </div>
+            </div>
+        </section>
 
-// ======= MAPA =======
-let map = L.map("map", { zoomControl:true }).setView([-1.8312, -78.1834], 6);
-const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19, attribution: "&copy; OpenStreetMap"
-}).addTo(map);
-const esriSat = L.tileLayer(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  { maxZoom: 19, attribution: "Tiles © Esri, Maxar, Earthstar Geographics, etc." }
-);
-L.control.layers({ "OSM": osm, "Satélite (Esri)": esriSat }, {}, { collapsed:true }).addTo(map);
+        <!-- Filters Section -->
+        <section class="filters-section">
+            <h3 class="section-title">
+                <i class="fas fa-filter me-2"></i>
+                Filtros de Búsqueda
+            </h3>
+            <div class="row">
+                <!-- Búsqueda por texto -->
+                <div class="col-md-4 mb-3">
+                    <label for="amieInput" class="form-label">Buscar por AMIE o Nombre</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" class="form-control" id="amieInput" 
+                               placeholder="Ingrese AMIE o nombre de institución">
+                    </div>
+                </div>
+                
+                <!-- Filtros geográficos -->
+                <div class="col-md-2 mb-3">
+                    <label for="provSelect" class="form-label">Provincia</label>
+                    <select class="form-select" id="provSelect">
+                        <option value="">Todas las provincias</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label for="cantSelect" class="form-label">Cantón</label>
+                    <select class="form-select" id="cantSelect">
+                        <option value="">Todos los cantones</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label for="parrSelect" class="form-label">Parroquia</label>
+                    <select class="form-select" id="parrSelect">
+                        <option value="">Todas las parroquias</option>
+                    </select>
+                </div>
+                
+                <!-- Filtros institucionales -->
+                <div class="col-md-2 mb-3">
+                    <label for="sostSelect" class="form-label">Sostenimiento</label>
+                    <select class="form-select" id="sostSelect">
+                        <option value="">Todos los tipos</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-2 mb-3">
+                    <label for="tipoSelect" class="form-label">Tipo</label>
+                    <select class="form-select" id="tipoSelect">
+                        <option value="">Todos los tipos</option>
+                        <option value="MATRIZ">Matriz</option>
+                        <option value="ESTABLECIMIENTO">Establecimiento</option>
+                    </select>
+                </div>
+                
+                <!-- Botones de acción -->
+                <div class="col-md-10 mb-3 d-flex align-items-end gap-2">
+                    <button type="button" class="btn btn-primary" id="searchBtn">
+                        <i class="fas fa-search me-1"></i>
+                        Buscar
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="clearBtn">
+                        <i class="fas fa-times me-1"></i>
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+        </section>
 
-// Cluster + red dot
-let clusterLayer = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:50 });
-map.addLayer(clusterLayer);
-const redDotIcon = L.divIcon({ className:"red-dot", html:"", iconSize:[10,10] });
+        <!-- Map Section -->
+        <section class="map-container">
+            <h3 class="section-title">
+                <i class="fas fa-map-marked-alt me-2"></i>
+                Mapa de Instituciones
+            </h3>
+            <div id="map"></div>
+            <!-- Barra de coordenadas -->
+            <div id="coordsBar" class="coords-bar">Lat: —  Lon: — (click para copiar)</div>
+        </section>
 
-// ======= COORDS BAR (sin plugin, nativo) =======
-const coordsBar = document.getElementById("coordsBar");
-function fmt(n){ return (Math.round(n*1e6)/1e6).toFixed(6); }
-map.on("mousemove", (e)=>{ coordsBar.textContent = `Lat: ${fmt(e.latlng.lat)}  Lon: ${fmt(e.latlng.lng)} (click para copiar)`; });
-coordsBar?.addEventListener("click", ()=>{
-  navigator.clipboard?.writeText(coordsBar.textContent.replace(" (click para copiar)",""));
-});
+        <!-- Table Section -->
+        <section class="table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="section-title mb-0">
+                    <i class="fas fa-table me-2"></i>
+                    Listado de Instituciones
+                </h3>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="pageSize" class="form-label mb-0 text-nowrap">Filas por página:</label>
+                    <select class="form-select form-select-sm" id="pageSize" style="width: auto;">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover" id="tbl">
+                    <thead>
+                        <tr>
+                            <th>AMIE</th>
+                            <th>Nombre Institución</th>
+                            <th>Tipo</th>
+                            <th>Sostenimiento</th>
+                            <th>Provincia</th>
+                            <th>Cantón</th>
+                            <th>Parroquia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Los datos se cargan dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Controles de paginación -->
+            <div class="pagination-controls">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-outline-primary btn-sm" id="prevPage">
+                        <i class="fas fa-chevron-left me-1"></i>
+                        Anterior
+                    </button>
+                    <span class="text-muted" id="pageInfo">Página 1/1</span>
+                    <button class="btn btn-outline-primary btn-sm" id="nextPage">
+                        Siguiente
+                        <i class="fas fa-chevron-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
 
-// (si quieres usar tu plugin latlontools real en lugar de la barra nativa, descomenta esto)
-// if (window.LatLonTools) { LatLonTools.addTo(map); }
+    <!-- Footer -->
+    <footer class="bg-light text-center py-3 mt-5">
+        <div class="container">
+            <p class="mb-0 text-muted">
+                <i class="fas fa-copyright me-1"></i>
+                2025 Dashboard de Instituciones Educativas - Sistema APIT
+            </p>
+        </div>
+    </footer>
 
-// ======= STATE =======
-let currentData = [];
-let currentPage = 1;
-let pageSize = parseInt(pageSizeSel?.value || "25", 10) || 25;
-
-// ======= HELPERS =======
-function applyFilters(q){
-  if(provSelect.value) q = q.eq("provincia", provSelect.value);
-  if(cantSelect.value) q = q.eq("canton", cantSelect.value);
-  if(parrSelect.value) q = q.eq("parroquia", parrSelect.value);
-  if(sostSelect.value) q = q.eq("sostenimiento", sostSelect.value);
-  if(tipoSelect.value) q = q.eq("tipo", tipoSelect.value);
-  return q;
-}
-
-function uniqueClean(values){
-  return [...new Set(values.map(v => (v ?? "").toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-}
-
-async function getDistinct(field){
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select(field)
-    .not(field, "is", null)
-    .neq(field, "")
-    .order(field, { ascending:true })
-    .limit(20000);
-  if(error){ console.error(error); return []; }
-  return uniqueClean((data||[]).map(r => r[field]));
-}
-
-// ======= LOAD FILTER OPTIONS =======
-// Provincia desde GeoJSON + fallback Supabase (unión de ambos)
-async function loadProvincesFromGeoJSON(){
-  try{
-    const res = await fetch("provincias.geojson", { cache:"no-store" });
-    const gj = await res.json();
-    // intenta estas propiedades comunes
-    const names = gj.features.map(f =>
-      (f.properties.DPA_DESPRO || f.properties.nombre || f.properties.NAME_1 || f.properties.provincia || "").toString().trim()
-    );
-    return uniqueClean(names);
-  }catch(e){
-    console.warn("No se pudo leer provincias.geojson:", e);
-    return [];
-  }
-}
-
-async function loadFilterOptions(){
-  // Provincias
-  const [provGeo, provDb] = await Promise.all([loadProvincesFromGeoJSON(), getDistinct("provincia")]);
-  const provAll = uniqueClean([...provGeo, ...provDb]);
-  provAll.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; provSelect.appendChild(o); });
-
-  // Cantones / Parroquias desde DB (limpios)
-  (await getDistinct("canton")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; cantSelect.appendChild(o); });
-  (await getDistinct("parroquia")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; parrSelect.appendChild(o); });
-
-  // Sostenimiento desde DB, orden preferente
-  const sost = (await getDistinct("sostenimiento")).map(s => s.toUpperCase());
-  const order = ["FISCAL","FISCOMISIONAL","PARTICULAR","MUNICIPAL"];
-  const seen = new Set();
-  const sorted = [...order.filter(x => sost.includes(x)), ...sost.filter(s => !order.includes(s) && !seen.has(s) && seen.add(s))];
-  sorted.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; sostSelect.appendChild(o); });
-}
-
-// ======= KPIs =======
-async function updateKPIs(){
-  let q = applyFilters(supabase.from(TABLE).select("*",{count:"exact", head:true}));
-  const { count: total } = await q; kpiTotal.textContent = total ?? "0";
-
-  let qm = applyFilters(supabase.from(TABLE).select("*",{count:"exact", head:true}).eq("tipo","MATRIZ"));
-  const { count: cm } = await qm; kpiMatriz.textContent = cm ?? "0";
-
-  let qe = applyFilters(supabase.from(TABLE).select("*",{count:"exact", head:true}).eq("tipo","ESTABLECIMIENTO"));
-  const { count: ce } = await qe; kpiEst.textContent = ce ?? "0";
-
-  let qs = applyFilters(supabase.from(TABLE).select("sostenimiento"));
-  const { data: ds, error: es } = await qs;
-  if(!es){ const setS = new Set((ds||[]).map(r => (r.sostenimiento||"").toString().trim()).filter(Boolean)); kpiSost.textContent = setS.size.toString(); }
-}
-
-// ======= QUERY + RENDER =======
-async function refreshData(){
-  let q = supabase.from(TABLE).select("amie,nombre_ie,tipo,sostenimiento,provincia,canton,parroquia,lat,lon").limit(5000);
-  q = applyFilters(q);
-
-  const term = amieInput.value.trim();
-  if(term){ /^[0-9A-Z]+$/.test(term) ? q = q.ilike("amie", `%${term}%`) : q = q.ilike("nombre_ie", `%${term}%`); }
-
-  const { data, error } = await q;
-  if(error){ console.error(error); return; }
-  currentData = data || [];
-  currentPage = 1;
-
-  renderMap(currentData);
-  renderTablePage();
-  updateKPIs();
-}
-
-function renderMap(rows){
-  clusterLayer.clearLayers();
-  const pts = [];
-  rows.filter(r => typeof r.lat==="number" && typeof r.lon==="number" && !Number.isNaN(r.lat) && !Number.isNaN(r.lon))
-      .forEach(r => {
-        const m = L.marker([r.lat, r.lon], { icon: redDotIcon })
-          .bindPopup(`<b>${r.nombre_ie||""}</b><br>AMIE: ${r.amie||""}<br>${r.provincia||""} / ${r.canton||""}`);
-        clusterLayer.addLayer(m);
-        pts.push([r.lat, r.lon]);
-      });
-  if(pts.length){ map.fitBounds(L.latLngBounds(pts).pad(0.2)); }
-}
-
-function renderTablePage(){
-  if(!pageSizeSel){ // si tu template no tiene paginación, render simple
-    tbody.innerHTML = "";
-    (currentData||[]).forEach(r=>{
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${r.amie||""}</td><td>${r.nombre_ie||""}</td><td>${r.tipo||""}</td>
-                      <td>${r.sostenimiento||""}</td><td>${r.provincia||""}</td><td>${r.canton||""}</td><td>${r.parroquia||""}</td>`;
-      tbody.appendChild(tr);
-    });
-    return;
-  }
-  const total = currentData.length;
-  pageSize = parseInt(pageSizeSel.value,10)||25;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  currentPage = Math.min(Math.max(1,currentPage), pageCount);
-  const start = (currentPage-1)*pageSize;
-  const slice = currentData.slice(start, start+pageSize);
-
-  tbody.innerHTML = "";
-  slice.forEach(r=>{
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${r.amie||""}</td><td>${r.nombre_ie||""}</td><td>${r.tipo||""}</td>
-                    <td>${r.sostenimiento||""}</td><td>${r.provincia||""}</td><td>${r.canton||""}</td><td>${r.parroquia||""}</td>`;
-    tbody.appendChild(tr);
-  });
-
-  pageInfo.textContent = `Página ${currentPage}/${pageCount}`;
-  prevPageBtn.disabled = currentPage<=1;
-  nextPageBtn.disabled = currentPage>=pageCount;
-}
-
-// ======= EVENTS =======
-searchBtn.addEventListener("click", refreshData);
-clearBtn.addEventListener("click", ()=>{
-  provSelect.value=""; cantSelect.value=""; parrSelect.value=""; sostSelect.value=""; tipoSelect.value="";
-  amieInput.value=""; refreshData();
-});
-[provSelect,cantSelect,parrSelect,sostSelect,tipoSelect].forEach(el => el.addEventListener("change", refreshData));
-
-prevPageBtn?.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
-nextPageBtn?.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
-pageSizeSel?.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
-
-// ======= INIT =======
-(async function init(){
-  await loadFilterOptions();
-  await refreshData();
-})();
+    <!-- Scripts -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet MarkerCluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    
+    <!-- Plugin latlontools (opcional) -->
+    <script src="latlontools/latlontools.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Tu script principal -->
+    <script type="module" src="app.js"></script>
+</body>
+</html>
