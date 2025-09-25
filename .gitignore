@@ -1,0 +1,10 @@
+# Build / deps
+node_modules/
+dist/
+
+# Local config (NO lo subas si el repo será público con otras opciones de hosting)
+config.js
+
+# OS files
+.DS_Store
+Thumbs.db
