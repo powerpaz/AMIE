@@ -18,13 +18,11 @@ const tipoSelect = document.getElementById("tipoSelect");
 const amieInput = document.getElementById("amieInput");
 const searchBtn = document.getElementById("searchBtn");
 const clearBtn = document.getElementById("clearBtn");
-const themeToggle = document.getElementById("themeToggle");
-
 const tbody = document.querySelector("#tbl tbody");
-const prevPageBtn = document.getElementById("prevPage");
-const nextPageBtn = document.getElementById("nextPage");
-const pageInfo = document.getElementById("pageInfo");
-const pageSizeSel = document.getElementById("pageSize");
+const pageSizeSel = document.getElementById?.("pageSize");
+const prevPageBtn = document.getElementById?.("prevPage");
+const nextPageBtn = document.getElementById?.("nextPage");
+const pageInfo = document.getElementById?.("pageInfo");
 
 // ======= MAPA =======
 let map = L.map("map", { zoomControl:true }).setView([-1.8312, -78.1834], 6);
@@ -37,21 +35,28 @@ const esriSat = L.tileLayer(
 );
 L.control.layers({ "OSM": osm, "Satélite (Esri)": esriSat }, {}, { collapsed:true }).addTo(map);
 
-// Cluster layer
-let clusterLayer = L.markerClusterGroup({
-  showCoverageOnHover: false,
-  maxClusterRadius: 50,
-});
+// Cluster + red dot
+let clusterLayer = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:50 });
 map.addLayer(clusterLayer);
-
-// Red dot icon via divIcon
 const redDotIcon = L.divIcon({ className:"red-dot", html:"", iconSize:[10,10] });
 
-// ======= STATE (tabla) =======
-let currentData = []; // resultados vigentes del query
-let currentPage = 1;
-let pageSize = parseInt(pageSizeSel.value, 10) || 25;
+// ======= COORDS BAR (sin plugin, nativo) =======
+const coordsBar = document.getElementById("coordsBar");
+function fmt(n){ return (Math.round(n*1e6)/1e6).toFixed(6); }
+map.on("mousemove", (e)=>{ coordsBar.textContent = `Lat: ${fmt(e.latlng.lat)}  Lon: ${fmt(e.latlng.lng)} (click para copiar)`; });
+coordsBar?.addEventListener("click", ()=>{
+  navigator.clipboard?.writeText(coordsBar.textContent.replace(" (click para copiar)",""));
+});
 
+// (si quieres usar tu plugin latlontools real en lugar de la barra nativa, descomenta esto)
+// if (window.LatLonTools) { LatLonTools.addTo(map); }
+
+// ======= STATE =======
+let currentData = [];
+let currentPage = 1;
+let pageSize = parseInt(pageSizeSel?.value || "25", 10) || 25;
+
+// ======= HELPERS =======
 function applyFilters(q){
   if(provSelect.value) q = q.eq("provincia", provSelect.value);
   if(cantSelect.value) q = q.eq("canton", cantSelect.value);
@@ -61,21 +66,55 @@ function applyFilters(q){
   return q;
 }
 
+function uniqueClean(values){
+  return [...new Set(values.map(v => (v ?? "").toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+}
+
+async function getDistinct(field){
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select(field)
+    .not(field, "is", null)
+    .neq(field, "")
+    .order(field, { ascending:true })
+    .limit(20000);
+  if(error){ console.error(error); return []; }
+  return uniqueClean((data||[]).map(r => r[field]));
+}
+
 // ======= LOAD FILTER OPTIONS =======
-async function loadDistinctOptions(){
-  const fields = ["provincia","canton","parroquia","sostenimiento"];
-  for(const f of fields){
-    const { data, error } = await supabase
-      .from(TABLE)
-      .select(`${f}`)
-      .not(f, "is", null).neq(f, "")
-      .order(f, { ascending:true })
-      .limit(10000);
-    if(error){ console.error(error); continue; }
-    const uniq = [...new Set((data||[]).map(r => r[f]))];
-    const sel = {provincia:provSelect, canton:cantSelect, parroquia:parrSelect, sostenimiento:sostSelect}[f];
-    uniq.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+// Provincia desde GeoJSON + fallback Supabase (unión de ambos)
+async function loadProvincesFromGeoJSON(){
+  try{
+    const res = await fetch("provincias.geojson", { cache:"no-store" });
+    const gj = await res.json();
+    // intenta estas propiedades comunes
+    const names = gj.features.map(f =>
+      (f.properties.DPA_DESPRO || f.properties.nombre || f.properties.NAME_1 || f.properties.provincia || "").toString().trim()
+    );
+    return uniqueClean(names);
+  }catch(e){
+    console.warn("No se pudo leer provincias.geojson:", e);
+    return [];
   }
+}
+
+async function loadFilterOptions(){
+  // Provincias
+  const [provGeo, provDb] = await Promise.all([loadProvincesFromGeoJSON(), getDistinct("provincia")]);
+  const provAll = uniqueClean([...provGeo, ...provDb]);
+  provAll.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; provSelect.appendChild(o); });
+
+  // Cantones / Parroquias desde DB (limpios)
+  (await getDistinct("canton")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; cantSelect.appendChild(o); });
+  (await getDistinct("parroquia")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; parrSelect.appendChild(o); });
+
+  // Sostenimiento desde DB, orden preferente
+  const sost = (await getDistinct("sostenimiento")).map(s => s.toUpperCase());
+  const order = ["FISCAL","FISCOMISIONAL","PARTICULAR","MUNICIPAL"];
+  const seen = new Set();
+  const sorted = [...order.filter(x => sost.includes(x)), ...sost.filter(s => !order.includes(s) && !seen.has(s) && seen.add(s))];
+  sorted.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; sostSelect.appendChild(o); });
 }
 
 // ======= KPIs =======
@@ -91,25 +130,19 @@ async function updateKPIs(){
 
   let qs = applyFilters(supabase.from(TABLE).select("sostenimiento"));
   const { data: ds, error: es } = await qs;
-  if(!es){ const setS=new Set((ds||[]).map(r=>r.sostenimiento).filter(Boolean)); kpiSost.textContent = setS.size.toString(); }
+  if(!es){ const setS = new Set((ds||[]).map(r => (r.sostenimiento||"").toString().trim()).filter(Boolean)); kpiSost.textContent = setS.size.toString(); }
 }
 
-// ======= QUERY + MAP + TABLE =======
+// ======= QUERY + RENDER =======
 async function refreshData(){
-  let q = supabase.from(TABLE)
-    .select("amie,nombre_ie,tipo,sostenimiento,provincia,canton,parroquia,lat,lon")
-    .limit(2000);
+  let q = supabase.from(TABLE).select("amie,nombre_ie,tipo,sostenimiento,provincia,canton,parroquia,lat,lon").limit(5000);
   q = applyFilters(q);
 
   const term = amieInput.value.trim();
-  if(term){
-    if(/^[0-9A-Z]+$/.test(term)) q = q.ilike("amie", `%${term}%`);
-    else q = q.ilike("nombre_ie", `%${term}%`);
-  }
+  if(term){ /^[0-9A-Z]+$/.test(term) ? q = q.ilike("amie", `%${term}%`) : q = q.ilike("nombre_ie", `%${term}%`); }
 
   const { data, error } = await q;
   if(error){ console.error(error); return; }
-
   currentData = data || [];
   currentPage = 1;
 
@@ -132,59 +165,51 @@ function renderMap(rows){
 }
 
 function renderTablePage(){
+  if(!pageSizeSel){ // si tu template no tiene paginación, render simple
+    tbody.innerHTML = "";
+    (currentData||[]).forEach(r=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${r.amie||""}</td><td>${r.nombre_ie||""}</td><td>${r.tipo||""}</td>
+                      <td>${r.sostenimiento||""}</td><td>${r.provincia||""}</td><td>${r.canton||""}</td><td>${r.parroquia||""}</td>`;
+      tbody.appendChild(tr);
+    });
+    return;
+  }
   const total = currentData.length;
-  pageSize = parseInt(pageSizeSel.value, 10) || 25;
+  pageSize = parseInt(pageSizeSel.value,10)||25;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  currentPage = Math.min(Math.max(1, currentPage), pageCount);
-
-  const start = (currentPage - 1) * pageSize;
-  const slice = currentData.slice(start, start + pageSize);
+  currentPage = Math.min(Math.max(1,currentPage), pageCount);
+  const start = (currentPage-1)*pageSize;
+  const slice = currentData.slice(start, start+pageSize);
 
   tbody.innerHTML = "";
-  slice.forEach(r => {
+  slice.forEach(r=>{
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${r.amie||""}</td>
-                    <td>${r.nombre_ie||""}</td>
-                    <td>${r.tipo||""}</td>
-                    <td>${r.sostenimiento||""}</td>
-                    <td>${r.provincia||""}</td>
-                    <td>${r.canton||""}</td>
-                    <td>${r.parroquia||""}</td>`;
+    tr.innerHTML = `<td>${r.amie||""}</td><td>${r.nombre_ie||""}</td><td>${r.tipo||""}</td>
+                    <td>${r.sostenimiento||""}</td><td>${r.provincia||""}</td><td>${r.canton||""}</td><td>${r.parroquia||""}</td>`;
     tbody.appendChild(tr);
   });
 
   pageInfo.textContent = `Página ${currentPage}/${pageCount}`;
-  prevPageBtn.disabled = currentPage <= 1;
-  nextPageBtn.disabled = currentPage >= pageCount;
+  prevPageBtn.disabled = currentPage<=1;
+  nextPageBtn.disabled = currentPage>=pageCount;
 }
 
 // ======= EVENTS =======
 searchBtn.addEventListener("click", refreshData);
-clearBtn.addEventListener("click", () => {
-  provSelect.value = ""; cantSelect.value = ""; parrSelect.value = ""; sostSelect.value = ""; tipoSelect.value = "";
-  amieInput.value = ""; refreshData();
+clearBtn.addEventListener("click", ()=>{
+  provSelect.value=""; cantSelect.value=""; parrSelect.value=""; sostSelect.value=""; tipoSelect.value="";
+  amieInput.value=""; refreshData();
 });
 [provSelect,cantSelect,parrSelect,sostSelect,tipoSelect].forEach(el => el.addEventListener("change", refreshData));
 
-prevPageBtn.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
-nextPageBtn.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
-pageSizeSel.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
-
-// Tema oscuro persistente
-(function initTheme(){
-  const saved = localStorage.getItem("theme");
-  if(saved === "dark") document.body.classList.add("dark");
-  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
-})();
-themeToggle.addEventListener("click", ()=>{
-  document.body.classList.toggle("dark");
-  localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
-  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
-});
+prevPageBtn?.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
+nextPageBtn?.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
+pageSizeSel?.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
 
 // ======= INIT =======
 (async function init(){
-  await loadDistinctOptions();
+  await loadFilterOptions();
   await refreshData();
 })();
 
