@@ -18,3 +18,10 @@ table{width:100%;border-collapse:collapse}
 th,td{font-size:12px;padding:8px;border-bottom:1px solid #f3f3f3}
 tr:hover{background:#fafafa}
 @media (max-width:900px){.dashboard{grid-template-columns:repeat(2,1fr)}.content{grid-template-columns:1fr}.search-row{width:100%}#map{height:45vh}}
+.leaflet-control-layers {
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.15);
+}
+.leaflet-control-zoom a {
+  border-radius: 8px !important;
+}
