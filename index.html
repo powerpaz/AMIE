@@ -21,6 +21,26 @@
   <link rel="stylesheet" href="latlontools/latlontools.css" onerror="this.remove()" />
   <script src="latlontools/latlontools.js" onerror="this.remove()"></script>
 
+<section class="tools">
+  <button id="toolDropPoint" class="ghost-btn">📍 Fijar punto</button>
+  <button id="toolDrawExtent" class="ghost-btn">⬛ Extent</button>
+  <button id="toolClearTools" class="ghost-btn">🧹 Limpiar</button>
+
+  <div class="tool-group">
+    <input id="zoomLat" placeholder="Lat (DD)" style="width:120px">
+    <input id="zoomLon" placeholder="Lon (DD)" style="width:120px">
+    <input id="zoomLevel" type="number" placeholder="Zoom" value="15" style="width:80px">
+    <button id="zoomGo" class="ghost-btn">Ir</button>
+  </div>
+
+  <div class="tool-group">
+    <input id="ddInput" placeholder="DD ej: -2.170998, -79.922359" style="width:260px">
+    <button id="dd2dms" class="ghost-btn">DD → DMS</button>
+    <input id="dmsInput" placeholder='DMS ej: 2°10′15″S, 79°55′20″W' style="width:260px">
+    <button id="dms2dd" class="ghost-btn">DMS → DD</button>
+  </div>
+</section>
+  
   <!-- App -->
   <script type="module" src="app.js"></script>
 
