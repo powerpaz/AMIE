@@ -1,4 +1,4 @@
-app_js = """// ======= SUPABASE =======
+// ======= SUPABASE =======
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = "https://krjwqagkjuzrpxianvnu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ";
@@ -27,6 +27,7 @@ const pageSizeSel = document.getElementById("pageSize");
 const zoomFree = document.getElementById("zoomFree");
 const zoomLevel = document.getElementById("zoomLevel");
 const coordsBar = document.getElementById("coordsBar");
+const utmOut = document.getElementById("utmOut");
 
 // ======= MAPA =======
 let map = L.map("map", { zoomControl:true }).setView([-1.8312, -78.1834], 6);
@@ -50,7 +51,7 @@ coordsBar.addEventListener("click", ()=> {
   const txt = coordsBar.textContent.replace(" (click para copiar)","");
   navigator.clipboard?.writeText(txt);
 });
-try { if (window.LatLonTools && typeof window.LatLonTools.addTo === "function") { window.LatLonTools.addTo(map); } } catch(e){ /* noop */ }
+try { if (window.LatLonTools && typeof window.LatLonTools.addTo === "function") { window.LatLonTools.addTo(map); } } catch(e){ /* opcional */ }
 
 // ======= Estado tabla =======
 let currentData = [];
@@ -129,14 +130,11 @@ async function updateKPIs(){
 
 // ======= Parseo flexible Lat,Lon con coma o punto =======
 function parseFlexibleLatLon(text){
-  // admite: "-2,8865297878858107, -78,77630732821005"  o  "-2.8865 -78.7763"  o  "-2.8865,-78.7763"
-  // estrategia: extraer dos números (con , o .) en orden de aparición
+  // admite: "-2,8865, -78,7763"  ó  "-2.8865,-78.7763"  ó  "-2.8865 -78.7763"
   const nums = [];
-  const re = /[-+]?\\d+(?:[\\.,]\\d+)?/g;
+  const re = /[-+]?\d+(?:[.,]\d+)?/g;
   let m;
-  while((m = re.exec(text)) && nums.length < 2){
-    nums.push(m[0]);
-  }
+  while((m = re.exec(text)) && nums.length < 2){ nums.push(m[0]); }
   if(nums.length < 2) return null;
   const lat = parseFloat(nums[0].replace(",", "."));
   const lon = parseFloat(nums[1].replace(",", "."));
@@ -146,11 +144,10 @@ function parseFlexibleLatLon(text){
 
 // ======= DD -> UTM con proj4 =======
 function ddToUtm(lat, lon){
-  // zona UTM
   const zone = Math.floor((lon + 180) / 6) + 1;
   const south = lat < 0;
   const projStr = `+proj=utm +zone=${zone} ${south?'+south':''} +datum=WGS84 +units=m +no_defs`;
-  const p = proj4('EPSG:4326', projStr, [lon, lat]); // proj4 espera [lon, lat]
+  const p = proj4('EPSG:4326', projStr, [lon, lat]); // [lon, lat]
   const easting = p[0], northing = p[1];
   return { zone, hemisphere: south ? 'S' : 'N', easting, northing };
 }
@@ -216,30 +213,6 @@ function renderTablePage(){
   nextPageBtn.disabled = currentPage >= pageCount;
 }
 
-// ======= Eventos =======
-searchBtn.addEventListener("click", refreshData);
-clearBtn.addEventListener("click", () => {
-  provSelect.value = ""; cantSelect.value = ""; parrSelect.value = ""; sostSelect.value = ""; tipoSelect.value = "";
-  amieInput.value = ""; refreshData();
-});
-[provSelect,cantSelect,parrSelect,sostSelect,tipoSelect].forEach(el => el.addEventListener("change", refreshData));
-
-prevPageBtn.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
-nextPageBtn.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
-pageSizeSel.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
-
-// Tema oscuro persistente
-(function initTheme(){
-  const saved = localStorage.getItem("theme");
-  if(saved === "dark") document.body.classList.add("dark");
-  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
-})();
-themeToggle.addEventListener("click", ()=>{
-  document.body.classList.toggle("dark");
-  localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
-  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
-});
-
 // ======= Herramientas tipo plugin =======
 let dropPointMode = false;
 let tempPoint;
@@ -302,7 +275,7 @@ document.getElementById("dd2dms").addEventListener("click", ()=>{
 document.getElementById("dms2dd").addEventListener("click", ()=>{
   const txt = document.getElementById("dmsInput").value;
   try {
-    const parts = txt.split(/\\s*,\\s*/);
+    const parts = txt.split(/\s*,\s*/);
     if(parts.length !== 2) throw new Error();
     const la = dmsToDD(parts[0]); const lo = dmsToDD(parts[1]);
     document.getElementById("ddInput").value = `${la.toFixed(6)}, ${lo.toFixed(6)}`;
@@ -315,7 +288,7 @@ document.getElementById("dd2utm").addEventListener("click", ()=>{
   if(!m){ alert("DD inválido. Ej: -2.170998, -79.922359"); return; }
   const res = ddToUtm(m.lat, m.lon);
   const txt = `UTM Zone ${res.zone}${res.hemisphere}  E=${res.easting.toFixed(2)}  N=${res.northing.toFixed(2)}`;
-  document.getElementById("utmOut").textContent = txt;
+  utmOut.textContent = txt;
   navigator.clipboard?.writeText(txt);
 });
 
@@ -325,39 +298,4 @@ function toDMS(deg, isLat){
   const d = Math.floor(abs);
   const m = Math.floor((abs - d) * 60);
   const s = ((abs - d) * 3600 - m * 60).toFixed(2);
-  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ? "E":"W");
-  return `${d}°${m}′${s}″${hemi}`;
-}
-function dmsToDD(dms){
-  const cleaned = dms.replace(/[^\\d NSEW\\.\\-]+/g, " ").trim();
-  const parts = cleaned.split(/\\s+/);
-  if(parts.length < 4) throw new Error("Formato DMS inválido");
-  const d = parseFloat(parts[0]), m = parseFloat(parts[1]), s = parseFloat(parts[2]);
-  const hemi = parts[3].toUpperCase();
-  let dd = Math.abs(d) + m/60 + s/3600;
-  if(hemi === "S" || hemi === "W") dd = -dd;
-  return dd;
-}
-
-// ======= INIT =======
-(async function init(){
-  await loadFilterOptions();
-  await refreshData();
-})();
-"""
-
-# Write files
-with open(os.path.join(root, "index.html"), "w", encoding="utf-8") as f: f.write(index_html)
-with open(os.path.join(root, "styles.css"), "w", encoding="utf-8") as f: f.write(styles_css)
-with open(os.path.join(root, "app.js"), "w", encoding="utf-8") as f: f.write(app_js)
-
-# Zip package
-zip_path = "/mnt/data/geoportal_with_utm_tools.zip"
-with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
-    for base, _, files in os.walk(root):
-        for file in files:
-            full = os.path.join(base, file)
-            arc = os.path.relpath(full, root)
-            z.write(full, arcname=arc)
-
-zip_path
+  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ?
