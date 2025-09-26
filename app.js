@@ -229,3 +229,106 @@ themeToggle.addEventListener("click", ()=>{
   await loadFilterOptions();
   await refreshData();
 })();
+
+// ===== Herramientas tipo plugin (equivalentes) =====
+
+// Conversión DD ↔ DMS
+function toDMS(deg, isLat){
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = ((abs - d) * 3600 - m * 60).toFixed(2);
+  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ? "E":"W");
+  return `${d}°${m}′${s}″${hemi}`;
+}
+function dmsToDD(dms){
+  // admite formatos como: 2°10′15″S o 2 10 15 S
+  const cleaned = dms.replace(/[^\d NSEW\.\-]+/g, " ").trim();
+  const parts = cleaned.split(/\s+/);
+  if(parts.length < 4) throw new Error("Formato DMS inválido");
+  const d = parseFloat(parts[0]), m = parseFloat(parts[1]), s = parseFloat(parts[2]);
+  const hemi = parts[3].toUpperCase();
+  let dd = Math.abs(d) + m/60 + s/3600;
+  if(hemi === "S" || hemi === "W") dd = -dd;
+  return dd;
+}
+
+// 1) Fijar marcador con click y copiar coords
+let dropPointMode = false;
+let tempPoint;
+document.getElementById("toolDropPoint").addEventListener("click", ()=>{
+  dropPointMode = !dropPointMode;
+  if(dropPointMode) { alert("Haz click en el mapa para fijar punto y copiar coordenadas."); }
+});
+map.on("click", (e)=>{
+  if(!dropPointMode) return;
+  if(tempPoint) map.removeLayer(tempPoint);
+  tempPoint = L.circleMarker(e.latlng, {radius:6, fillColor:"#ff2a2a", color:"#ff2a2a", weight:0, fillOpacity:1}).addTo(map);
+  const ddText = `Lat: ${e.latlng.lat.toFixed(6)}, Lon: ${e.latlng.lng.toFixed(6)}`;
+  navigator.clipboard?.writeText(ddText);
+  alert(`Copiado: ${ddText}`);
+  dropPointMode = false;
+});
+
+// 2) Dibujar extent (rectángulo) y exportar
+let drawnItems = new L.FeatureGroup().addTo(map);
+let drawControl;
+document.getElementById("toolDrawExtent").addEventListener("click", ()=>{
+  if(drawControl){
+    map.removeControl(drawControl);
+    drawControl = null;
+  }
+  drawControl = new L.Control.Draw({
+    draw: { marker:false, circle:false, circlemarker:false, polyline:false, polygon:false, rectangle:true },
+    edit: { featureGroup: drawnItems, edit:false, remove:true }
+  });
+  map.addControl(drawControl);
+});
+map.on(L.Draw.Event.CREATED, function (e) {
+  drawnItems.addLayer(e.layer);
+  const b = e.layer.getBounds();
+  const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+  console.log("BBOX:", bbox);
+  const gj = e.layer.toGeoJSON();
+  // descarga GeoJSON simple del rectángulo
+  const blob = new Blob([JSON.stringify(gj)], {type: "application/geo+json"});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'extent.geojson';
+  a.click();
+});
+// botón limpiar
+document.getElementById("toolClearTools").addEventListener("click", ()=>{
+  drawnItems.clearLayers();
+  if(tempPoint) { map.removeLayer(tempPoint); tempPoint = null; }
+});
+
+// 3) Zoom a Lat/Lon
+document.getElementById("zoomGo").addEventListener("click", ()=>{
+  const lat = parseFloat(document.getElementById("zoomLat").value);
+  const lon = parseFloat(document.getElementById("zoomLon").value);
+  const z = parseInt(document.getElementById("zoomLevel").value || "15", 10);
+  if(Number.isFinite(lat) && Number.isFinite(lon)) map.setView([lat,lon], z);
+  else alert("Lat/Lon no válidos");
+});
+
+// 4) Convertidores
+document.getElementById("dd2dms").addEventListener("click", ()=>{
+  const txt = document.getElementById("ddInput").value;
+  const m = txt.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
+  if(!m) { alert("DD inválido. Ej: -2.170998, -79.922359"); return; }
+  const la = parseFloat(m[1]), lo = parseFloat(m[2]);
+  document.getElementById("dmsInput").value = `${toDMS(la,true)}, ${toDMS(lo,false)}`;
+});
+document.getElementById("dms2dd").addEventListener("click", ()=>{
+  const txt = document.getElementById("dmsInput").value;
+  try {
+    // admite “LatDMS, LonDMS”
+    const parts = txt.split(/\s*,\s*/);
+    if(parts.length !== 2) throw new Error();
+    const la = dmsToDD(parts[0]); const lo = dmsToDD(parts[1]);
+    document.getElementById("ddInput").value = `${la.toFixed(6)}, ${lo.toFixed(6)}`;
+  } catch(e) {
+    alert("DMS inválido. Ej: 2°10′15″S, 79°55′20″W");
+  }
+});
