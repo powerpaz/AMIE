@@ -1,4 +1,4 @@
-:root{
+""":root{
   --bg:#ffffff; --fg:#111; --muted:#666; --card:#fff; --border:#eaeaea;
   --chip:#f2f2f2; --table-hover:#fafafa; --kpi:#111;
 }
@@ -14,6 +14,7 @@ h1{font-size:18px;margin:0;flex:1}
 .search-row input{flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg)}
 .search-row button{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg);cursor:pointer}
 .ghost-btn{padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg);cursor:pointer}
+.chip{padding:4px 8px;background:var(--chip);border:1px solid var(--border);border-radius:999px;font-size:12px}
 
 main{padding:12px}
 .dashboard{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px}
@@ -22,6 +23,10 @@ main{padding:12px}
 .kpi-value{font-size:26px;font-weight:800;color:var(--kpi)}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .filters select,.filters button{padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg)}
+
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.tool-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
 .content{display:grid;grid-template-columns:1.2fr 1fr;gap:12px}
 #map{height:65vh;border:1px solid var(--border);border-radius:14px;overflow:hidden}
 .table-wrap{max-height:65vh;display:flex;flex-direction:column;gap:8px;border:1px solid var(--border);border-radius:14px;background:var(--card);overflow:hidden}
@@ -31,18 +36,374 @@ tbody tr:hover{background:var(--table-hover)}
 .pagination{display:flex;align-items:center;gap:8px;padding:8px;border-top:1px solid var(--border)}
 #pageInfo{font-size:12px;color:var(--muted)}
 @media (max-width:1000px){.content{grid-template-columns:1fr}#map{height:50vh}}
-/* Leaflet polish */
 .leaflet-control-layers{border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .leaflet-control-zoom a{border-radius:8px !important}
-/* Red dot marker */
 .red-dot{width:10px;height:10px;border-radius:50%;background:#ff2a2a;border:0}
-/* Barra de coordenadas */
-.coords-bar{
-  margin-top:8px;padding:8px 10px;border:1px solid var(--border);
+.coords-bar{margin-top:8px;padding:8px 10px;border:1px solid var(--border);
   background:var(--card);color:var(--fg);border-radius:10px;font-size:12px;
-  user-select:none;cursor:pointer;width:fit-content;box-shadow:0 1px 4px rgba(0,0,0,.05)
+  user-select:none;cursor:pointer;width:fit-content;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+"""
+
+app_js = """// ======= SUPABASE =======
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+const SUPABASE_URL = "https://krjwqagkjuzrpxianvnu.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ";
+export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE = "instituciones";
+
+// ======= UI =======
+const kpiTotal = document.getElementById("kpiTotal");
+const kpiMatriz = document.getElementById("kpiMatriz");
+const kpiEst = document.getElementById("kpiEst");
+const kpiSost = document.getElementById("kpiSost");
+const provSelect = document.getElementById("provSelect");
+const cantSelect = document.getElementById("cantSelect");
+const parrSelect = document.getElementById("parrSelect");
+const sostSelect = document.getElementById("sostSelect");
+const tipoSelect = document.getElementById("tipoSelect");
+const amieInput = document.getElementById("amieInput");
+const searchBtn = document.getElementById("searchBtn");
+const clearBtn = document.getElementById("clearBtn");
+const themeToggle = document.getElementById("themeToggle");
+const tbody = document.querySelector("#tbl tbody");
+const prevPageBtn = document.getElementById("prevPage");
+const nextPageBtn = document.getElementById("nextPage");
+const pageInfo = document.getElementById("pageInfo");
+const pageSizeSel = document.getElementById("pageSize");
+const zoomFree = document.getElementById("zoomFree");
+const zoomLevel = document.getElementById("zoomLevel");
+const coordsBar = document.getElementById("coordsBar");
+
+// ======= MAPA =======
+let map = L.map("map", { zoomControl:true }).setView([-1.8312, -78.1834], 6);
+const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19, attribution: "&copy; OpenStreetMap"
+}).addTo(map);
+const esriSat = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 19, attribution: "Tiles © Esri, Maxar, Earthstar Geographics, etc." }
+);
+L.control.layers({ "OSM": osm, "Satélite (Esri)": esriSat }, {}, { collapsed:true }).addTo(map);
+
+let clusterLayer = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:50 });
+map.addLayer(clusterLayer);
+const redDotIcon = L.divIcon({ className:"red-dot", html:"", iconSize:[10,10] });
+
+// ======= Barra coords =======
+function fmt(n){ return (Math.round(n*1e6)/1e6).toFixed(6); }
+map.on("mousemove", (e)=>{ coordsBar.textContent = `Lat: ${fmt(e.latlng.lat)}  Lon: ${fmt(e.latlng.lng)} (click para copiar)`; });
+coordsBar.addEventListener("click", ()=> {
+  const txt = coordsBar.textContent.replace(" (click para copiar)","");
+  navigator.clipboard?.writeText(txt);
+});
+try { if (window.LatLonTools && typeof window.LatLonTools.addTo === "function") { window.LatLonTools.addTo(map); } } catch(e){ /* noop */ }
+
+// ======= Estado tabla =======
+let currentData = [];
+let currentPage = 1;
+let pageSize = parseInt(pageSizeSel.value, 10) || 25;
+
+// ======= Utils =======
+function applyFilters(q){
+  if(provSelect.value) q = q.eq("provincia", provSelect.value);
+  if(cantSelect.value) q = q.eq("canton", cantSelect.value);
+  if(parrSelect.value) q = q.eq("parroquia", parrSelect.value);
+  if(sostSelect.value) q = q.eq("sostenimiento", sostSelect.value);
+  if(tipoSelect.value) q = q.eq("tipo", tipoSelect.value);
+  return q;
+}
+function uniqueClean(values){
+  return [...new Set(values.map(v => (v ?? "").toString().trim()).filter(Boolean))]
+         .sort((a,b)=>a.localeCompare(b,'es'));
+}
+async function getDistinct(field){
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select(field)
+    .not(field, "is", null).neq(field, "")
+    .order(field, { ascending:true })
+    .limit(20000);
+  if(error){ console.error(error); return []; }
+  return uniqueClean((data||[]).map(r => r[field]));
 }
 
-.tools{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
-.tool-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+// Provincias desde GeoJSON + DB
+async function loadProvincesFromGeoJSON(){
+  try{
+    const res = await fetch("provincias.geojson", { cache:"no-store" });
+    const gj = await res.json();
+    const names = gj.features.map(f =>
+      (f.properties.DPA_DESPRO || f.properties.nombre || f.properties.NAME_1 || f.properties.provincia || "").toString().trim()
+    );
+    return uniqueClean(names);
+  }catch(e){
+    console.warn("No se pudo leer provincias.geojson:", e);
+    return [];
+  }
+}
 
+async function loadFilterOptions(){
+  const [provGeo, provDb] = await Promise.all([loadProvincesFromGeoJSON(), getDistinct("provincia")]);
+  const provAll = uniqueClean([...provGeo, ...provDb]);
+  provAll.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; provSelect.appendChild(o); });
+
+  (await getDistinct("canton")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; cantSelect.appendChild(o); });
+  (await getDistinct("parroquia")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; parrSelect.appendChild(o); });
+
+  const sost = (await getDistinct("sostenimiento")).map(s => s.toUpperCase());
+  const order = ["FISCAL","FISCOMISIONAL","PARTICULAR","MUNICIPAL"];
+  const seen = new Set();
+  const sorted = [...order.filter(x => sost.includes(x)), ...sost.filter(s => !order.includes(s) && !seen.has(s) && seen.add(s))];
+  sorted.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; sostSelect.appendChild(o); });
+}
+
+// ======= KPIs =======
+async function updateKPIs(){
+  let q = applyFilters(supabase.from(TABLE).select("*",{count:"exact", head:true}));
+  const { count: total } = await q; kpiTotal.textContent = total ?? "0";
+
+  let qm = applyFilters(supabase.from(TABLE).select("*",{count:"exact", head:true}).eq("tipo","MATRIZ"));
+  const { count: cm } = await qm; kpiMatriz.textContent = cm ?? "0";
+
+  let qe = applyFilters(supabase.from(TABLE).select("*",{count:"exact", head:true}).eq("tipo","ESTABLECIMIENTO"));
+  const { count: ce } = await qe; kpiEst.textContent = ce ?? "0";
+
+  let qs = applyFilters(supabase.from(TABLE).select("sostenimiento"));
+  const { data: ds, error: es } = await qs;
+  if(!es){ const setS = new Set((ds||[]).map(r => (r.sostenimiento||"").toString().trim()).filter(Boolean)); kpiSost.textContent = setS.size.toString(); }
+}
+
+// ======= Parseo flexible Lat,Lon con coma o punto =======
+function parseFlexibleLatLon(text){
+  // admite: "-2,8865297878858107, -78,77630732821005"  o  "-2.8865 -78.7763"  o  "-2.8865,-78.7763"
+  // estrategia: extraer dos números (con , o .) en orden de aparición
+  const nums = [];
+  const re = /[-+]?\\d+(?:[\\.,]\\d+)?/g;
+  let m;
+  while((m = re.exec(text)) && nums.length < 2){
+    nums.push(m[0]);
+  }
+  if(nums.length < 2) return null;
+  const lat = parseFloat(nums[0].replace(",", "."));
+  const lon = parseFloat(nums[1].replace(",", "."));
+  if(!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return {lat, lon};
+}
+
+// ======= DD -> UTM con proj4 =======
+function ddToUtm(lat, lon){
+  // zona UTM
+  const zone = Math.floor((lon + 180) / 6) + 1;
+  const south = lat < 0;
+  const projStr = `+proj=utm +zone=${zone} ${south?'+south':''} +datum=WGS84 +units=m +no_defs`;
+  const p = proj4('EPSG:4326', projStr, [lon, lat]); // proj4 espera [lon, lat]
+  const easting = p[0], northing = p[1];
+  return { zone, hemisphere: south ? 'S' : 'N', easting, northing };
+}
+
+// ======= DATA + RENDER =======
+async function refreshData(){
+  let q = supabase.from(TABLE)
+    .select("amie,nombre_ie,tipo,sostenimiento,provincia,canton,parroquia,lat,lon")
+    .limit(5000);
+  q = applyFilters(q);
+
+  const term = amieInput.value.trim();
+  if(term){ /^[0-9A-Z]+$/.test(term) ? q = q.ilike("amie", `%${term}%`) : q = q.ilike("nombre_ie", `%${term}%`); }
+
+  const { data, error } = await q;
+  if(error){ console.error(error); return; }
+
+  currentData = data || [];
+  currentPage = 1;
+
+  renderMap(currentData);
+  renderTablePage();
+  updateKPIs();
+}
+
+function renderMap(rows){
+  clusterLayer.clearLayers();
+  const pts = [];
+  rows.filter(r => typeof r.lat==="number" && typeof r.lon==="number" && !Number.isNaN(r.lat) && !Number.isNaN(r.lon))
+      .forEach(r => {
+        const m = L.marker([r.lat, r.lon], { icon: redDotIcon })
+          .bindPopup(`<b>${r.nombre_ie||""}</b><br>AMIE: ${r.amie||""}<br>${r.provincia||""} / ${r.canton||""}`);
+        clusterLayer.addLayer(m);
+        pts.push([r.lat, r.lon]);
+      });
+  if(pts.length){ map.fitBounds(L.latLngBounds(pts).pad(0.2)); }
+}
+
+function renderTablePage(){
+  const total = currentData.length;
+  pageSize = parseInt(pageSizeSel.value, 10) || 25;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  currentPage = Math.min(Math.max(1, currentPage), pageCount);
+
+  const start = (currentPage - 1) * pageSize;
+  const slice = currentData.slice(start, start + pageSize);
+
+  tbody.innerHTML = "";
+  slice.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${r.amie||""}</td>
+                    <td>${r.nombre_ie||""}</td>
+                    <td>${r.tipo||""}</td>
+                    <td>${r.sostenimiento||""}</td>
+                    <td>${r.provincia||""}</td>
+                    <td>${r.canton||""}</td>
+                    <td>${r.parroquia||""}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  pageInfo.textContent = `Página ${currentPage}/${pageCount}`;
+  prevPageBtn.disabled = currentPage <= 1;
+  nextPageBtn.disabled = currentPage >= pageCount;
+}
+
+// ======= Eventos =======
+searchBtn.addEventListener("click", refreshData);
+clearBtn.addEventListener("click", () => {
+  provSelect.value = ""; cantSelect.value = ""; parrSelect.value = ""; sostSelect.value = ""; tipoSelect.value = "";
+  amieInput.value = ""; refreshData();
+});
+[provSelect,cantSelect,parrSelect,sostSelect,tipoSelect].forEach(el => el.addEventListener("change", refreshData));
+
+prevPageBtn.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
+nextPageBtn.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
+pageSizeSel.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
+
+// Tema oscuro persistente
+(function initTheme(){
+  const saved = localStorage.getItem("theme");
+  if(saved === "dark") document.body.classList.add("dark");
+  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+})();
+themeToggle.addEventListener("click", ()=>{
+  document.body.classList.toggle("dark");
+  localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+});
+
+// ======= Herramientas tipo plugin =======
+let dropPointMode = false;
+let tempPoint;
+document.getElementById("toolDropPoint").addEventListener("click", ()=>{
+  dropPointMode = !dropPointMode;
+  if(dropPointMode) alert("Haz click en el mapa para fijar punto y copiar coordenadas.");
+});
+map.on("click", (e)=>{
+  if(!dropPointMode) return;
+  if(tempPoint) map.removeLayer(tempPoint);
+  tempPoint = L.circleMarker(e.latlng, {radius:6, fillColor:"#ff2a2a", color:"#ff2a2a", weight:0, fillOpacity:1}).addTo(map);
+  const ddText = `Lat: ${e.latlng.lat.toFixed(6)}, Lon: ${e.latlng.lng.toFixed(6)}`;
+  navigator.clipboard?.writeText(ddText);
+  alert(`Copiado: ${ddText}`);
+  dropPointMode = false;
+});
+
+let drawnItems = new L.FeatureGroup().addTo(map);
+let drawControl;
+document.getElementById("toolDrawExtent").addEventListener("click", ()=>{
+  if(drawControl){ map.removeControl(drawControl); drawControl=null; }
+  drawControl = new L.Control.Draw({
+    draw: { marker:false, circle:false, circlemarker:false, polyline:false, polygon:false, rectangle:true },
+    edit: { featureGroup: drawnItems, edit:false, remove:true }
+  });
+  map.addControl(drawControl);
+});
+map.on(L.Draw.Event.CREATED, function (e) {
+  drawnItems.addLayer(e.layer);
+  const b = e.layer.getBounds();
+  const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+  console.log("BBOX:", bbox);
+  const gj = e.layer.toGeoJSON();
+  const blob = new Blob([JSON.stringify(gj)], {type: "application/geo+json"});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'extent.geojson';
+  a.click();
+});
+document.getElementById("toolClearTools").addEventListener("click", ()=>{
+  drawnItems.clearLayers();
+  if(tempPoint){ map.removeLayer(tempPoint); tempPoint=null; }
+});
+
+// Zoom flexible (acepta coma o punto)
+document.getElementById("zoomGo").addEventListener("click", ()=>{
+  const parsed = parseFlexibleLatLon(zoomFree.value);
+  const z = parseInt(zoomLevel.value || "15", 10);
+  if(!parsed){ alert("Formato no válido. Ej: -2,8865, -78,7763  ó  -2.8865,-78.7763"); return; }
+  map.setView([parsed.lat, parsed.lon], z);
+});
+
+// Conversores
+document.getElementById("dd2dms").addEventListener("click", ()=>{
+  const m = parseFlexibleLatLon(document.getElementById("ddInput").value);
+  if(!m){ alert("DD inválido. Ej: -2.170998, -79.922359"); return; }
+  const la = m.lat, lo = m.lon;
+  document.getElementById("dmsInput").value = `${toDMS(la,true)}, ${toDMS(lo,false)}`;
+});
+document.getElementById("dms2dd").addEventListener("click", ()=>{
+  const txt = document.getElementById("dmsInput").value;
+  try {
+    const parts = txt.split(/\\s*,\\s*/);
+    if(parts.length !== 2) throw new Error();
+    const la = dmsToDD(parts[0]); const lo = dmsToDD(parts[1]);
+    document.getElementById("ddInput").value = `${la.toFixed(6)}, ${lo.toFixed(6)}`;
+  } catch(e) {
+    alert("DMS inválido. Ej: 2°10′15″S, 79°55′20″W");
+  }
+});
+document.getElementById("dd2utm").addEventListener("click", ()=>{
+  const m = parseFlexibleLatLon(document.getElementById("ddInput").value);
+  if(!m){ alert("DD inválido. Ej: -2.170998, -79.922359"); return; }
+  const res = ddToUtm(m.lat, m.lon);
+  const txt = `UTM Zone ${res.zone}${res.hemisphere}  E=${res.easting.toFixed(2)}  N=${res.northing.toFixed(2)}`;
+  document.getElementById("utmOut").textContent = txt;
+  navigator.clipboard?.writeText(txt);
+});
+
+// Conversión DD <-> DMS helpers
+function toDMS(deg, isLat){
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = ((abs - d) * 3600 - m * 60).toFixed(2);
+  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ? "E":"W");
+  return `${d}°${m}′${s}″${hemi}`;
+}
+function dmsToDD(dms){
+  const cleaned = dms.replace(/[^\\d NSEW\\.\\-]+/g, " ").trim();
+  const parts = cleaned.split(/\\s+/);
+  if(parts.length < 4) throw new Error("Formato DMS inválido");
+  const d = parseFloat(parts[0]), m = parseFloat(parts[1]), s = parseFloat(parts[2]);
+  const hemi = parts[3].toUpperCase();
+  let dd = Math.abs(d) + m/60 + s/3600;
+  if(hemi === "S" || hemi === "W") dd = -dd;
+  return dd;
+}
+
+// ======= INIT =======
+(async function init(){
+  await loadFilterOptions();
+  await refreshData();
+})();
+"""
+
+# Write files
+with open(os.path.join(root, "index.html"), "w", encoding="utf-8") as f: f.write(index_html)
+with open(os.path.join(root, "styles.css"), "w", encoding="utf-8") as f: f.write(styles_css)
+with open(os.path.join(root, "app.js"), "w", encoding="utf-8") as f: f.write(app_js)
+
+# Zip package
+zip_path = "/mnt/data/geoportal_with_utm_tools.zip"
+with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
+    for base, _, files in os.walk(root):
+        for file in files:
+            full = os.path.join(base, file)
+            arc = os.path.relpath(full, root)
+            z.write(full, arcname=arc)
+
+zip_path
