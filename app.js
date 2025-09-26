@@ -298,4 +298,43 @@ function toDMS(deg, isLat){
   const d = Math.floor(abs);
   const m = Math.floor((abs - d) * 60);
   const s = ((abs - d) * 3600 - m * 60).toFixed(2);
-  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ?
+  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ? "E":"W");
+  return `${d}°${m}′${s}″${hemi}`;
+}
+function dmsToDD(dms){
+  const cleaned = dms.replace(/[^\d NSEW\.\-]+/g, " ").trim();
+  const parts = cleaned.split(/\s+/);
+  if(parts.length < 4) throw new Error("Formato DMS inválido");
+  const d = parseFloat(parts[0]), m = parseFloat(parts[1]), s = parseFloat(parts[2]);
+  const hemi = parts[3].toUpperCase();
+  let dd = Math.abs(d) + m/60 + s/3600;
+  if(hemi === "S" || hemi === "W") dd = -dd;
+  return dd;
+}
+
+// ======= INIT =======
+(async function init(){
+  // tema (persistente)
+  const saved = localStorage.getItem("theme");
+  if(saved === "dark") document.body.classList.add("dark");
+  themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+  themeToggle.addEventListener("click", ()=>{
+    document.body.classList.toggle("dark");
+    localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+  });
+
+  await loadFilterOptions();
+  await refreshData();
+
+  searchBtn.addEventListener("click", refreshData);
+  clearBtn.addEventListener("click", () => {
+    provSelect.value = ""; cantSelect.value = ""; parrSelect.value = ""; sostSelect.value = ""; tipoSelect.value = "";
+    amieInput.value = ""; refreshData();
+  });
+  [provSelect,cantSelect,parrSelect,sostSelect,tipoSelect].forEach(el => el.addEventListener("change", refreshData));
+
+  prevPageBtn.addEventListener("click", ()=>{ currentPage--; renderTablePage(); });
+  nextPageBtn.addEventListener("click", ()=>{ currentPage++; renderTablePage(); });
+  pageSizeSel.addEventListener("change", ()=>{ currentPage=1; renderTablePage(); });
+})();
