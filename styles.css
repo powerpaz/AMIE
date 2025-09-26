@@ -42,4 +42,3 @@ tbody tr:hover{background:var(--table-hover)}
 .coords-bar{margin-top:8px;padding:8px 10px;border:1px solid var(--border);
   background:var(--card);color:var(--fg);border-radius:10px;font-size:12px;
   user-select:none;cursor:pointer;width:fit-content;box-shadow:0 1px 4px rgba(0,0,0,.05)}
-
