@@ -25,18 +25,21 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
-  <!-- (Opcional) plugin de coordenadas -->
+  <!-- (Opcional) tu plugin de coordenadas -->
   <link rel="stylesheet" href="latlontools/latlontools.css" onerror="this.remove()" />
   <script src="latlontools/latlontools.js" onerror="this.remove()"></script>
 
-  <!-- Preload de datos -->
+  <!-- Precarga de datos pesados -->
   <link rel="preload" href="provincias.geojson" as="fetch" crossorigin>
 
-  <!-- App -->
+  <!-- Tu app (NO tocar; aquí se crea el mapa) -->
   <script type="module" src="app.js"></script>
+
+  <!-- Script aparte SOLO para la tabla -->
+  <script type="module" src="table-selection.js"></script>
 </head>
 <body>
-  <header class="app-header">
+  <header>
     <h1>Geoportal — Instituciones Educativas</h1>
 
     <div class="search-row">
@@ -47,7 +50,6 @@
   </header>
 
   <main>
-    <!-- KPIs -->
     <section class="dashboard">
       <div class="card"><div class="kpi-label">Instituciones</div><div id="kpiTotal" class="kpi-value">—</div></div>
       <div class="card"><div class="kpi-label">Matriz</div><div id="kpiMatriz" class="kpi-value">—</div></div>
@@ -55,7 +57,6 @@
       <div class="card"><div class="kpi-label">Sostenimientos</div><div id="kpiSost" class="kpi-value">—</div></div>
     </section>
 
-    <!-- Filtros -->
     <section class="filters">
       <select id="provSelect"><option value="">Provincia</option></select>
       <select id="cantSelect"><option value="">Cantón</option></select>
@@ -69,7 +70,7 @@
       <button id="clearBtn" class="ghost-btn">Limpiar</button>
     </section>
 
-    <!-- Herramientas -->
+    <!-- Herramientas tipo plugin -->
     <section class="tools">
       <button id="toolDropPoint" class="ghost-btn">📍 Fijar punto</button>
       <button id="toolDrawExtent" class="ghost-btn">⬛ Extent</button>
@@ -91,7 +92,6 @@
       </div>
     </section>
 
-    <!-- Mapa + Tabla -->
     <section class="content">
       <div id="map"></div>
 
@@ -115,7 +115,7 @@
                 <th>Parroquia</th>
               </tr>
             </thead>
-            <tbody id="tblBody"></tbody>
+            <tbody id="tblBody"><!-- filas dinámicas --></tbody>
           </table>
         </div>
 
@@ -132,10 +132,7 @@
       </div>
     </section>
 
-    <div id="coordsBar" class="coords-bar">
-      Lat: —  Lon: — (click para copiar)
-    </div>
+    <div id="coordsBar" class="coords-bar">Lat: —  Lon: — (click para copiar)</div>
   </main>
 </body>
 </html>
-
