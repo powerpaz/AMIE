@@ -1,77 +1,61 @@
-// ==================== Selección de filas + botón Limpiar ====================
+// table-selection.js
+// Maneja selección de filas y el botón "Limpiar selección" SIN modificar tu app.js
 
-/**
- * Conecta la tabla para alternar selección con click.
- * Llamar después de pintar el <tbody>.
- */
-export function wireTableSelection() {
-  const tbody = document.getElementById('tblBody');
-  if (!tbody) return;
-
-  // Evitar doble enlace
-  if (tbody.dataset.wired === '1') return;
-  tbody.dataset.wired = '1';
-
-  // Delegación de eventos
-  tbody.addEventListener('click', (ev) => {
-    const tr = ev.target.closest('tr');
-    if (!tr) return;
-    tr.classList.toggle('is-selected');
-    updateSelectionCounter();
-  });
+function getTbody(){
+  return document.getElementById('tblBody') || document.querySelector('#tbl tbody');
 }
 
-/** Cuenta filas seleccionadas y actualiza el texto del botón */
-function updateSelectionCounter() {
-  const tbody = document.getElementById('tblBody');
+function updateSelectionCounter(){
+  const tbody = getTbody();
   const btn = document.getElementById('clearSelectionBtn');
   if (!tbody || !btn) return;
   const count = tbody.querySelectorAll('tr.is-selected').length;
   btn.textContent = `Limpiar selección (${count})`;
 }
 
-/** Limpia selección de todas las filas */
-export function clearSelection() {
-  const tbody = document.getElementById('tblBody');
+function wireTableSelection(){
+  const tbody = getTbody();
   if (!tbody) return;
-  tbody.querySelectorAll('tr.is-selected').forEach(tr => tr.classList.remove('is-selected'));
-  updateSelectionCounter();
+
+  // No duplicar
+  if (tbody.dataset.wired === '1') return;
+  tbody.dataset.wired = '1';
+
+  // Delegación: click en cualquier celda alterna la selección de su fila
+  tbody.addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr');
+    if (!tr) return;
+    tr.classList.toggle('is-selected');
+    updateSelectionCounter();
+  });
+
+  // Observa cambios de filas (paginación/filtrado) y resetea contador
+  const mo = new MutationObserver(() => {
+    updateSelectionCounter();
+  });
+  mo.observe(tbody, {childList:true, subtree:false});
 }
 
-/** Enlaza botón limpiar */
-function wireClearButton() {
+function wireClearButton(){
   const btn = document.getElementById('clearSelectionBtn');
   if (!btn) return;
   if (btn.dataset.wired === '1') return;
   btn.dataset.wired = '1';
-  btn.addEventListener('click', clearSelection);
+  btn.addEventListener('click', () => {
+    const tbody = getTbody();
+    if (!tbody) return;
+    tbody.querySelectorAll('tr.is-selected').forEach(tr => tr.classList.remove('is-selected'));
+    updateSelectionCounter();
+  });
 }
 
-// ==================== Inicialización mínima ====================
 document.addEventListener('DOMContentLoaded', () => {
+  wireTableSelection();
   wireClearButton();
-  wireTableSelection(); // si ya hay filas iniciales
+  updateSelectionCounter();
 
-  // Si tú repintas la tabla tras filtros/paginación, recuerda:
-  // 1) reinyectar <tbody id="tblBody">...</tbody>
-  // 2) llamar wireTableSelection();
-  // 3) llamar updateSelectionCounter();
+  // Pequeño "nudge" por si el mapa se renderiza antes del layout final
+  // (muchas apps Leaflet escuchan resize y recalculan tamaño)
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 200);
 });
 
-// ==================== EJEMPLO de render (borra si ya tienes uno) ====================
-// function renderTabla(data){
-//   const tbody = document.getElementById('tblBody');
-//   tbody.innerHTML = data.map(r => `
-//     <tr>
-//       <td>${r.AMIE}</td>
-//       <td>${r.Nombre}</td>
-//       <td>${r.Tipo}</td>
-//       <td>${r.Sostenimiento}</td>
-//       <td>${r.Provincia}</td>
-//       <td>${r.Cantón}</td>
-//       <td>${r.Parroquia}</td>
-//     </tr>
-//   `).join('');
-//   wireTableSelection();
-//   updateSelectionCounter();
-// }
