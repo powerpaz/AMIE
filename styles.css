@@ -42,3 +42,7 @@ tbody tr:hover{background:var(--table-hover)}
   background:var(--card);color:var(--fg);border-radius:10px;font-size:12px;
   user-select:none;cursor:pointer;width:fit-content;box-shadow:0 1px 4px rgba(0,0,0,.05)
 }
+
+.tools{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+.tool-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
