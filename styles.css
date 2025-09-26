@@ -1,114 +1,96 @@
-/* =========================================================
-   styles.css – Estilo de tabla con bordes verde Spotify
-   Colores clave:
-     Verde:   #1DB954
-     Blanco:  #FFFFFF
-     Texto:   #000000
-   ========================================================= */
-
-/* -------- Variables base (por si quieres reusar) -------- */
+/* ========= Base mínima ========= */
 :root{
   --accent: #1DB954; /* verde */
-  --bg: #FFFFFF;     /* blanco */
-  --text: #000000;   /* negro */
+  --bg: #FFFFFF;
+  --text: #000000;
   --border-w: 2px;
   --radius: 10px;
   --shadow: 0 2px 10px rgba(0,0,0,.06);
 }
-
-/* Reset muy ligero para que no rompa tu layout */
 *{ box-sizing: border-box; }
-html, body{ margin:0; padding:0; color:var(--text); background:var(--bg); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif; }
+html, body{ margin:0; padding:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif; color:var(--text); background:var(--bg); }
 
-/* -------- Contenedor scrolleable de la tabla -------- */
-/* Aplica a un wrapper que ya tengas o añade esta clase al div de la tabla */
+.app-header{ padding: 10px 12px; }
+.search-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+.ghost-btn{
+  padding:6px 10px; border-radius:8px; cursor:pointer; background:#fff; border:1px solid #ddd;
+}
+.chip{ display:inline-block; padding:4px 8px; border:1px solid #ccc; border-radius:999px; }
+
+/* ========= Layout mapa + tabla ========= */
+.content{ display:grid; grid-template-columns: minmax(300px, 1fr) minmax(300px, 560px); gap:12px; padding:12px; }
+#map{ min-height: 520px; height: 60vh; border:1px solid #e6e6e6; border-radius:8px; }
+
+.table-wrap{ display:flex; flex-direction:column; gap:10px; }
+.table-actions{ display:flex; gap:8px; align-items:center; }
+
+/* Botón estilo borde verde */
+.button-ghost{
+  border: var(--border-w) solid var(--accent);
+  background: #FFFFFF;
+  color: #000000;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.button-ghost:hover{ background:#EAFBEF; }
+
+/* ========= Tabla verde Spotify ========= */
 .table-container{
-  width: 100%;
-  overflow: auto;                 /* scroll horizontal en pantallas pequeñas */
+  width:100%;
+  overflow:auto;
   border: var(--border-w) solid var(--accent);
   border-radius: var(--radius);
   background: var(--bg);
   box-shadow: var(--shadow);
 }
 
-/* -------- Tabla principal -------- */
-/* Si tu tabla tiene una clase (p.ej. .data-table) cámbiala aquí. */
-table{
-  width: 100%;
-  border-collapse: collapse;      /* bordes nítidos */
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.35;
+.tabla-instituciones{
+  width:100%;
+  border-collapse: collapse;
+  font-size:14px; line-height:1.35;
+  background:#FFFFFF; color:#000000;
 }
 
-/* Borde verde en toda la tabla */
-table, th, td{
+.tabla-instituciones,
+.tabla-instituciones th,
+.tabla-instituciones td{
   border: var(--border-w) solid var(--accent);
 }
 
-/* -------- Encabezados -------- */
-thead th{
-  position: sticky;               /* encabezado pegajoso al hacer scroll */
-  top: 0;
-  z-index: 1;
-  background: var(--accent);      /* fondo verde */
-  color: #FFFFFF;                 /* texto blanco */
-  text-align: left;
-  font-weight: 700;
-  letter-spacing: .2px;
-  padding: 10px 12px;
-  white-space: nowrap;
+.tabla-instituciones thead th{
+  position: sticky; top: 0; z-index: 2;
+  background: var(--accent); color:#FFFFFF;
+  text-align:left; font-weight:700; letter-spacing:.2px;
+  padding:10px 12px; white-space:nowrap;
 }
 
-/* -------- Celdas -------- */
-td{
-  padding: 10px 12px;
-  vertical-align: top;
-  background: #FFFFFF;            /* filas sobre fondo blanco */
-  color: #000000;                 /* texto negro */
+.tabla-instituciones td{
+  padding:10px 12px; vertical-align: top;
+  background:#FFFFFF; color:#000000;
 }
 
-/* Alternado sutil sin perder el blanco predominante */
-tbody tr:nth-child(even) td{
-  background: #FAFFFB;            /* blanco con tinte muy leve */
+.tabla-instituciones tbody tr:nth-child(even) td{ background:#FAFFFB; }
+.tabla-instituciones tbody tr:hover td{ background:#EAFBEF; }
+
+/* Selección on/off */
+.tabla-instituciones tbody tr.is-selected td{
+  background:#1DB954 !important; color:#FFFFFF !important;
 }
 
-/* Hover de fila: verde muy claro */
-tbody tr:hover td{
-  background: #EAFBEF;            /* verde pálido */
-}
+/* Paginación */
+.pagination{ display:flex; gap:8px; align-items:center; padding:4px 0; }
 
-/* -------- Paginación / controles (si los usas encima o debajo) -------- */
-.table-actions{
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin: 8px 0 12px;
-}
-
-.button-ghost{
-  border: var(--border-w) solid var(--accent);
-  background: #FFFFFF;
-  color: #000000;
-  padding: 6px 10px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.button-ghost:hover{ background: #EAFBEF; }
-
-/* -------- Utilidades opcionales -------- */
-.text-right{ text-align: right; }
-.text-center{ text-align: center; }
-.nowrap{ white-space: nowrap; }
-
-/* -------- Responsivo -------- */
+/* Responsive */
 @media (max-width: 992px){
-  table{ font-size: 13px; }
-  thead th, td{ padding: 8px 10px; }
+  .content{ grid-template-columns: 1fr; }
+  #map{ height: 45vh; }
+  .tabla-instituciones{ font-size: 13px; }
+  .tabla-instituciones thead th, .tabla-instituciones td{ padding:8px 10px; }
 }
 @media (max-width: 600px){
-  table{ font-size: 12px; }
-  .table-container{ border-width: 1.5px; }
+  .tabla-instituciones{ font-size: 12px; }
+  .table-container{ border-width:1.5px; }
 }
