@@ -1,4 +1,4 @@
-// ======= SUPABASE =======
+app_js = """// ======= SUPABASE =======
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = "https://krjwqagkjuzrpxianvnu.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ";
@@ -24,11 +24,12 @@ const prevPageBtn = document.getElementById("prevPage");
 const nextPageBtn = document.getElementById("nextPage");
 const pageInfo = document.getElementById("pageInfo");
 const pageSizeSel = document.getElementById("pageSize");
+const zoomFree = document.getElementById("zoomFree");
+const zoomLevel = document.getElementById("zoomLevel");
+const coordsBar = document.getElementById("coordsBar");
 
 // ======= MAPA =======
 let map = L.map("map", { zoomControl:true }).setView([-1.8312, -78.1834], 6);
-
-// Base layers
 const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19, attribution: "&copy; OpenStreetMap"
 }).addTo(map);
@@ -38,29 +39,25 @@ const esriSat = L.tileLayer(
 );
 L.control.layers({ "OSM": osm, "Satélite (Esri)": esriSat }, {}, { collapsed:true }).addTo(map);
 
-// Cluster layer + red dot icon
 let clusterLayer = L.markerClusterGroup({ showCoverageOnHover:false, maxClusterRadius:50 });
 map.addLayer(clusterLayer);
 const redDotIcon = L.divIcon({ className:"red-dot", html:"", iconSize:[10,10] });
 
-// ======= Barra de coordenadas / Plugin =======
-const coordsBar = document.getElementById("coordsBar");
+// ======= Barra coords =======
 function fmt(n){ return (Math.round(n*1e6)/1e6).toFixed(6); }
 map.on("mousemove", (e)=>{ coordsBar.textContent = `Lat: ${fmt(e.latlng.lat)}  Lon: ${fmt(e.latlng.lng)} (click para copiar)`; });
 coordsBar.addEventListener("click", ()=> {
   const txt = coordsBar.textContent.replace(" (click para copiar)","");
   navigator.clipboard?.writeText(txt);
 });
-
-// Si subiste tu plugin latlontools y expone LatLonTools.addTo(map), lo activamos sin romper si no existe
 try { if (window.LatLonTools && typeof window.LatLonTools.addTo === "function") { window.LatLonTools.addTo(map); } } catch(e){ /* noop */ }
 
-// ======= STATE (tabla) =======
+// ======= Estado tabla =======
 let currentData = [];
 let currentPage = 1;
 let pageSize = parseInt(pageSizeSel.value, 10) || 25;
 
-// ======= HELPERS =======
+// ======= Utils =======
 function applyFilters(q){
   if(provSelect.value) q = q.eq("provincia", provSelect.value);
   if(cantSelect.value) q = q.eq("canton", cantSelect.value);
@@ -77,15 +74,14 @@ async function getDistinct(field){
   const { data, error } = await supabase
     .from(TABLE)
     .select(field)
-    .not(field, "is", null)
-    .neq(field, "")
+    .not(field, "is", null).neq(field, "")
     .order(field, { ascending:true })
     .limit(20000);
   if(error){ console.error(error); return []; }
   return uniqueClean((data||[]).map(r => r[field]));
 }
 
-// ======= Filtros =======
+// Provincias desde GeoJSON + DB
 async function loadProvincesFromGeoJSON(){
   try{
     const res = await fetch("provincias.geojson", { cache:"no-store" });
@@ -101,16 +97,13 @@ async function loadProvincesFromGeoJSON(){
 }
 
 async function loadFilterOptions(){
-  // Provincias: catálogo + DB (unión)
   const [provGeo, provDb] = await Promise.all([loadProvincesFromGeoJSON(), getDistinct("provincia")]);
   const provAll = uniqueClean([...provGeo, ...provDb]);
   provAll.forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; provSelect.appendChild(o); });
 
-  // Cantón / Parroquia desde DB
   (await getDistinct("canton")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; cantSelect.appendChild(o); });
   (await getDistinct("parroquia")).forEach(v => { const o=document.createElement("option"); o.value=v; o.textContent=v; parrSelect.appendChild(o); });
 
-  // Sostenimiento (orden preferente)
   const sost = (await getDistinct("sostenimiento")).map(s => s.toUpperCase());
   const order = ["FISCAL","FISCOMISIONAL","PARTICULAR","MUNICIPAL"];
   const seen = new Set();
@@ -134,6 +127,34 @@ async function updateKPIs(){
   if(!es){ const setS = new Set((ds||[]).map(r => (r.sostenimiento||"").toString().trim()).filter(Boolean)); kpiSost.textContent = setS.size.toString(); }
 }
 
+// ======= Parseo flexible Lat,Lon con coma o punto =======
+function parseFlexibleLatLon(text){
+  // admite: "-2,8865297878858107, -78,77630732821005"  o  "-2.8865 -78.7763"  o  "-2.8865,-78.7763"
+  // estrategia: extraer dos números (con , o .) en orden de aparición
+  const nums = [];
+  const re = /[-+]?\\d+(?:[\\.,]\\d+)?/g;
+  let m;
+  while((m = re.exec(text)) && nums.length < 2){
+    nums.push(m[0]);
+  }
+  if(nums.length < 2) return null;
+  const lat = parseFloat(nums[0].replace(",", "."));
+  const lon = parseFloat(nums[1].replace(",", "."));
+  if(!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return {lat, lon};
+}
+
+// ======= DD -> UTM con proj4 =======
+function ddToUtm(lat, lon){
+  // zona UTM
+  const zone = Math.floor((lon + 180) / 6) + 1;
+  const south = lat < 0;
+  const projStr = `+proj=utm +zone=${zone} ${south?'+south':''} +datum=WGS84 +units=m +no_defs`;
+  const p = proj4('EPSG:4326', projStr, [lon, lat]); // proj4 espera [lon, lat]
+  const easting = p[0], northing = p[1];
+  return { zone, hemisphere: south ? 'S' : 'N', easting, northing };
+}
+
 // ======= DATA + RENDER =======
 async function refreshData(){
   let q = supabase.from(TABLE)
@@ -142,10 +163,7 @@ async function refreshData(){
   q = applyFilters(q);
 
   const term = amieInput.value.trim();
-  if(term){
-    if(/^[0-9A-Z]+$/.test(term)) q = q.ilike("amie", `%${term}%`);
-    else q = q.ilike("nombre_ie", `%${term}%`);
-  }
+  if(term){ /^[0-9A-Z]+$/.test(term) ? q = q.ilike("amie", `%${term}%`) : q = q.ilike("nombre_ie", `%${term}%`); }
 
   const { data, error } = await q;
   if(error){ console.error(error); return; }
@@ -161,14 +179,13 @@ async function refreshData(){
 function renderMap(rows){
   clusterLayer.clearLayers();
   const pts = [];
-  rows
-    .filter(r => typeof r.lat==="number" && typeof r.lon==="number" && !Number.isNaN(r.lat) && !Number.isNaN(r.lon))
-    .forEach(r => {
-      const m = L.marker([r.lat, r.lon], { icon: redDotIcon })
-        .bindPopup(`<b>${r.nombre_ie||""}</b><br>AMIE: ${r.amie||""}<br>${r.provincia||""} / ${r.canton||""}`);
-      clusterLayer.addLayer(m);
-      pts.push([r.lat, r.lon]);
-    });
+  rows.filter(r => typeof r.lat==="number" && typeof r.lon==="number" && !Number.isNaN(r.lat) && !Number.isNaN(r.lon))
+      .forEach(r => {
+        const m = L.marker([r.lat, r.lon], { icon: redDotIcon })
+          .bindPopup(`<b>${r.nombre_ie||""}</b><br>AMIE: ${r.amie||""}<br>${r.provincia||""} / ${r.canton||""}`);
+        clusterLayer.addLayer(m);
+        pts.push([r.lat, r.lon]);
+      });
   if(pts.length){ map.fitBounds(L.latLngBounds(pts).pad(0.2)); }
 }
 
@@ -199,12 +216,11 @@ function renderTablePage(){
   nextPageBtn.disabled = currentPage >= pageCount;
 }
 
-// ======= EVENTOS =======
+// ======= Eventos =======
 searchBtn.addEventListener("click", refreshData);
 clearBtn.addEventListener("click", () => {
   provSelect.value = ""; cantSelect.value = ""; parrSelect.value = ""; sostSelect.value = ""; tipoSelect.value = "";
-  amieInput.value = "";
-  refreshData();
+  amieInput.value = ""; refreshData();
 });
 [provSelect,cantSelect,parrSelect,sostSelect,tipoSelect].forEach(el => el.addEventListener("change", refreshData));
 
@@ -224,41 +240,12 @@ themeToggle.addEventListener("click", ()=>{
   themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
 });
 
-// ======= INIT =======
-(async function init(){
-  await loadFilterOptions();
-  await refreshData();
-})();
-
-// ===== Herramientas tipo plugin (equivalentes) =====
-
-// Conversión DD ↔ DMS
-function toDMS(deg, isLat){
-  const abs = Math.abs(deg);
-  const d = Math.floor(abs);
-  const m = Math.floor((abs - d) * 60);
-  const s = ((abs - d) * 3600 - m * 60).toFixed(2);
-  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ? "E":"W");
-  return `${d}°${m}′${s}″${hemi}`;
-}
-function dmsToDD(dms){
-  // admite formatos como: 2°10′15″S o 2 10 15 S
-  const cleaned = dms.replace(/[^\d NSEW\.\-]+/g, " ").trim();
-  const parts = cleaned.split(/\s+/);
-  if(parts.length < 4) throw new Error("Formato DMS inválido");
-  const d = parseFloat(parts[0]), m = parseFloat(parts[1]), s = parseFloat(parts[2]);
-  const hemi = parts[3].toUpperCase();
-  let dd = Math.abs(d) + m/60 + s/3600;
-  if(hemi === "S" || hemi === "W") dd = -dd;
-  return dd;
-}
-
-// 1) Fijar marcador con click y copiar coords
+// ======= Herramientas tipo plugin =======
 let dropPointMode = false;
 let tempPoint;
 document.getElementById("toolDropPoint").addEventListener("click", ()=>{
   dropPointMode = !dropPointMode;
-  if(dropPointMode) { alert("Haz click en el mapa para fijar punto y copiar coordenadas."); }
+  if(dropPointMode) alert("Haz click en el mapa para fijar punto y copiar coordenadas.");
 });
 map.on("click", (e)=>{
   if(!dropPointMode) return;
@@ -270,14 +257,10 @@ map.on("click", (e)=>{
   dropPointMode = false;
 });
 
-// 2) Dibujar extent (rectángulo) y exportar
 let drawnItems = new L.FeatureGroup().addTo(map);
 let drawControl;
 document.getElementById("toolDrawExtent").addEventListener("click", ()=>{
-  if(drawControl){
-    map.removeControl(drawControl);
-    drawControl = null;
-  }
+  if(drawControl){ map.removeControl(drawControl); drawControl=null; }
   drawControl = new L.Control.Draw({
     draw: { marker:false, circle:false, circlemarker:false, polyline:false, polygon:false, rectangle:true },
     edit: { featureGroup: drawnItems, edit:false, remove:true }
@@ -290,41 +273,36 @@ map.on(L.Draw.Event.CREATED, function (e) {
   const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
   console.log("BBOX:", bbox);
   const gj = e.layer.toGeoJSON();
-  // descarga GeoJSON simple del rectángulo
   const blob = new Blob([JSON.stringify(gj)], {type: "application/geo+json"});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'extent.geojson';
   a.click();
 });
-// botón limpiar
 document.getElementById("toolClearTools").addEventListener("click", ()=>{
   drawnItems.clearLayers();
-  if(tempPoint) { map.removeLayer(tempPoint); tempPoint = null; }
+  if(tempPoint){ map.removeLayer(tempPoint); tempPoint=null; }
 });
 
-// 3) Zoom a Lat/Lon
+// Zoom flexible (acepta coma o punto)
 document.getElementById("zoomGo").addEventListener("click", ()=>{
-  const lat = parseFloat(document.getElementById("zoomLat").value);
-  const lon = parseFloat(document.getElementById("zoomLon").value);
-  const z = parseInt(document.getElementById("zoomLevel").value || "15", 10);
-  if(Number.isFinite(lat) && Number.isFinite(lon)) map.setView([lat,lon], z);
-  else alert("Lat/Lon no válidos");
+  const parsed = parseFlexibleLatLon(zoomFree.value);
+  const z = parseInt(zoomLevel.value || "15", 10);
+  if(!parsed){ alert("Formato no válido. Ej: -2,8865, -78,7763  ó  -2.8865,-78.7763"); return; }
+  map.setView([parsed.lat, parsed.lon], z);
 });
 
-// 4) Convertidores
+// Conversores
 document.getElementById("dd2dms").addEventListener("click", ()=>{
-  const txt = document.getElementById("ddInput").value;
-  const m = txt.match(/(-?\d+\.?\d*)\s*,\s*(-?\d+\.?\d*)/);
-  if(!m) { alert("DD inválido. Ej: -2.170998, -79.922359"); return; }
-  const la = parseFloat(m[1]), lo = parseFloat(m[2]);
+  const m = parseFlexibleLatLon(document.getElementById("ddInput").value);
+  if(!m){ alert("DD inválido. Ej: -2.170998, -79.922359"); return; }
+  const la = m.lat, lo = m.lon;
   document.getElementById("dmsInput").value = `${toDMS(la,true)}, ${toDMS(lo,false)}`;
 });
 document.getElementById("dms2dd").addEventListener("click", ()=>{
   const txt = document.getElementById("dmsInput").value;
   try {
-    // admite “LatDMS, LonDMS”
-    const parts = txt.split(/\s*,\s*/);
+    const parts = txt.split(/\\s*,\\s*/);
     if(parts.length !== 2) throw new Error();
     const la = dmsToDD(parts[0]); const lo = dmsToDD(parts[1]);
     document.getElementById("ddInput").value = `${la.toFixed(6)}, ${lo.toFixed(6)}`;
@@ -332,3 +310,54 @@ document.getElementById("dms2dd").addEventListener("click", ()=>{
     alert("DMS inválido. Ej: 2°10′15″S, 79°55′20″W");
   }
 });
+document.getElementById("dd2utm").addEventListener("click", ()=>{
+  const m = parseFlexibleLatLon(document.getElementById("ddInput").value);
+  if(!m){ alert("DD inválido. Ej: -2.170998, -79.922359"); return; }
+  const res = ddToUtm(m.lat, m.lon);
+  const txt = `UTM Zone ${res.zone}${res.hemisphere}  E=${res.easting.toFixed(2)}  N=${res.northing.toFixed(2)}`;
+  document.getElementById("utmOut").textContent = txt;
+  navigator.clipboard?.writeText(txt);
+});
+
+// Conversión DD <-> DMS helpers
+function toDMS(deg, isLat){
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = ((abs - d) * 3600 - m * 60).toFixed(2);
+  const hemi = isLat ? (deg >= 0 ? "N":"S") : (deg >= 0 ? "E":"W");
+  return `${d}°${m}′${s}″${hemi}`;
+}
+function dmsToDD(dms){
+  const cleaned = dms.replace(/[^\\d NSEW\\.\\-]+/g, " ").trim();
+  const parts = cleaned.split(/\\s+/);
+  if(parts.length < 4) throw new Error("Formato DMS inválido");
+  const d = parseFloat(parts[0]), m = parseFloat(parts[1]), s = parseFloat(parts[2]);
+  const hemi = parts[3].toUpperCase();
+  let dd = Math.abs(d) + m/60 + s/3600;
+  if(hemi === "S" || hemi === "W") dd = -dd;
+  return dd;
+}
+
+// ======= INIT =======
+(async function init(){
+  await loadFilterOptions();
+  await refreshData();
+})();
+"""
+
+# Write files
+with open(os.path.join(root, "index.html"), "w", encoding="utf-8") as f: f.write(index_html)
+with open(os.path.join(root, "styles.css"), "w", encoding="utf-8") as f: f.write(styles_css)
+with open(os.path.join(root, "app.js"), "w", encoding="utf-8") as f: f.write(app_js)
+
+# Zip package
+zip_path = "/mnt/data/geoportal_with_utm_tools.zip"
+with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as z:
+    for base, _, files in os.walk(root):
+        for file in files:
+            full = os.path.join(base, file)
+            arc = os.path.relpath(full, root)
+            z.write(full, arcname=arc)
+
+zip_path
