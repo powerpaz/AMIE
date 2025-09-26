@@ -1,138 +1,135 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Geoportal — Instituciones Educativas</title>
+/* ======================= Variables base ======================= */
+:root{
+  --accent: #1DB954;            /* verde principal */
+  --bg: #FFFFFF;                /* fondo */
+  --text: #000000;              /* texto */
+  --muted: #6b7280;             /* gris */
+  --border-w: 2px;
+  --radius: 10px;
+  --shadow: 0 2px 10px rgba(0,0,0,.06);
+}
 
-  <!-- Estilos propios -->
-  <link rel="stylesheet" href="styles.css">
+*{ box-sizing: border-box; }
+html, body{
+  margin:0; padding:0;
+  color:var(--text); background:var(--bg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+}
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+/* ======================= Estructura ======================= */
+header{ padding: 12px; }
+header h1{ margin:0 0 10px; font-size: 28px; }
+.search-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
-  <!-- MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+.dashboard, .filters, .tools{ padding: 0 12px 8px; }
+.kpi-label{ color: var(--muted); font-size: 12px; }
+.kpi-value{ font-weight: 800; font-size: 22px; }
+.card{ background: #fff; border:1px solid #eee; border-radius: 10px; padding: 10px 12px; box-shadow: var(--shadow); }
+.dashboard{ display:grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap:10px; }
 
-  <!-- Leaflet Draw (extent) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
-  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+.content{
+  display: grid;
+  grid-template-columns: 1fr 520px;
+  gap: 12px;
+  padding: 12px;
+}
+#map{
+  min-height: 520px;
+  height: 60vh;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+}
+.coords-bar{
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #555;
+}
 
-  <!-- Proj4 (DD <-> UTM) -->
-  <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
+/* Botones base */
+.ghost-btn{
+  padding:6px 10px; border-radius:8px; cursor:pointer; background:#fff; border:1px solid #ddd;
+}
+.ghost-btn:hover{ background:#f6f6f6; }
 
-  <!-- (Opcional) tu plugin de coordenadas -->
-  <link rel="stylesheet" href="latlontools/latlontools.css" onerror="this.remove()" />
-  <script src="latlontools/latlontools.js" onerror="this.remove()"></script>
+/* ======================= Tabla (estilo verde Spotify) ======================= */
+.table-wrap{ display:flex; flex-direction:column; gap:10px; }
 
-  <!-- Precarga de datos pesados -->
-  <link rel="preload" href="provincias.geojson" as="fetch" crossorigin>
+.table-actions{ display:flex; gap:8px; align-items:center; }
+.button-ghost{
+  border: var(--border-w) solid var(--accent);
+  background: #FFFFFF;
+  color: #000000;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.button-ghost:hover{ background:#EAFBEF; }
 
-  <!-- Tu app (NO tocar; aquí se crea el mapa) -->
-  <script type="module" src="app.js"></script>
+.table-container{
+  width: 100%;
+  overflow: auto;
+  border: var(--border-w) solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow);
+}
 
-  <!-- Script aparte SOLO para la tabla -->
-  <script type="module" src="table-selection.js"></script>
-</head>
-<body>
-  <header>
-    <h1>Geoportal — Instituciones Educativas</h1>
+.tabla-instituciones{
+  width: 100%;
+  border-collapse: collapse;
+  background: #FFFFFF;
+  color: #000000;
+  font-size: 14px;
+  line-height: 1.35;
+}
 
-    <div class="search-row">
-      <input id="amieInput" placeholder="Buscar por AMIE o nombre" />
-      <button id="searchBtn" class="ghost-btn">Buscar</button>
-      <button id="themeToggle" class="ghost-btn" title="Cambiar tema">🌙</button>
-    </div>
-  </header>
+/* Bordes verdes en todo */
+.tabla-instituciones,
+.tabla-instituciones th,
+.tabla-instituciones td{
+  border: var(--border-w) solid var(--accent);
+}
 
-  <main>
-    <section class="dashboard">
-      <div class="card"><div class="kpi-label">Instituciones</div><div id="kpiTotal" class="kpi-value">—</div></div>
-      <div class="card"><div class="kpi-label">Matriz</div><div id="kpiMatriz" class="kpi-value">—</div></div>
-      <div class="card"><div class="kpi-label">Establecimiento</div><div id="kpiEst" class="kpi-value">—</div></div>
-      <div class="card"><div class="kpi-label">Sostenimientos</div><div id="kpiSost" class="kpi-value">—</div></div>
-    </section>
+/* Encabezado pegajoso y verde */
+.tabla-instituciones thead th{
+  position: sticky; top: 0; z-index: 2;
+  background: var(--accent); color: #FFFFFF;
+  text-align: left; font-weight: 700; letter-spacing: .2px;
+  padding: 10px 12px; white-space: nowrap;
+}
 
-    <section class="filters">
-      <select id="provSelect"><option value="">Provincia</option></select>
-      <select id="cantSelect"><option value="">Cantón</option></select>
-      <select id="parrSelect"><option value="">Parroquia</option></select>
-      <select id="sostSelect"><option value="">Sostenimiento</option></select>
-      <select id="tipoSelect">
-        <option value="">Tipo</option>
-        <option value="MATRIZ">MATRIZ</option>
-        <option value="ESTABLECIMIENTO">ESTABLECIMIENTO</option>
-      </select>
-      <button id="clearBtn" class="ghost-btn">Limpiar</button>
-    </section>
+/* Celdas */
+.tabla-instituciones td{
+  padding: 10px 12px;
+  vertical-align: top;
+  background: #FFFFFF; color: #000000;
+}
 
-    <!-- Herramientas tipo plugin -->
-    <section class="tools">
-      <button id="toolDropPoint" class="ghost-btn">📍 Fijar punto</button>
-      <button id="toolDrawExtent" class="ghost-btn">⬛ Extent</button>
-      <button id="toolClearTools" class="ghost-btn">🧹 Limpiar</button>
+/* Alternado y hover */
+.tabla-instituciones tbody tr:nth-child(even) td{ background: #FAFFFB; }
+.tabla-instituciones tbody tr:hover td{ background: #EAFBEF; }
 
-      <div class="tool-group">
-        <input id="zoomFree" placeholder="Lat, Lon (acepta , o .)" style="width:240px">
-        <input id="zoomLevel" type="number" placeholder="Zoom" value="15" style="width:80px">
-        <button id="zoomGo" class="ghost-btn">Ir</button>
-      </div>
+/* Selección por click */
+.tabla-instituciones tbody tr.is-selected td{
+  background: #1DB954 !important;
+  color: #FFFFFF !important;
+}
 
-      <div class="tool-group">
-        <input id="ddInput" placeholder="DD ej: -2.170998, -79.922359" style="width:260px">
-        <button id="dd2dms" class="ghost-btn">DD → DMS</button>
-        <input id="dmsInput" placeholder='DMS ej: 2°10′15″S, 79°55′20″W' style="width:260px">
-        <button id="dms2dd" class="ghost-btn">DMS → DD</button>
-        <button id="dd2utm" class="ghost-btn">DD → UTM</button>
-        <span id="utmOut" class="chip"></span>
-      </div>
-    </section>
+/* Paginación */
+.pagination{ display:flex; gap:8px; align-items:center; padding:6px 0; }
 
-    <section class="content">
-      <div id="map"></div>
-
-      <div class="table-wrap">
-        <div class="table-actions">
-          <button id="clearSelectionBtn" class="button-ghost" type="button">
-            Limpiar selección (0)
-          </button>
-        </div>
-
-        <div class="table-container">
-          <table id="tbl" class="tabla-instituciones">
-            <thead>
-              <tr>
-                <th>AMIE</th>
-                <th>Nombre</th>
-                <th>Tipo</th>
-                <th>Sostenimiento</th>
-                <th>Provincia</th>
-                <th>Cantón</th>
-                <th>Parroquia</th>
-              </tr>
-            </thead>
-            <tbody id="tblBody"><!-- filas dinámicas --></tbody>
-          </table>
-        </div>
-
-        <div class="pagination">
-          <button id="prevPage" class="ghost-btn">◀</button>
-          <span id="pageInfo">Página 1/1</span>
-          <button id="nextPage" class="ghost-btn">▶</button>
-          <select id="pageSize">
-            <option value="25" selected>25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-        </div>
-      </div>
-    </section>
-
-    <div id="coordsBar" class="coords-bar">Lat: —  Lon: — (click para copiar)</div>
-  </main>
-</body>
-</html>
+/* ======================= Responsive ======================= */
+@media (max-width: 1100px){
+  .content{ grid-template-columns: 1fr; }
+  #map{ height: 50vh; }
+}
+@media (max-width: 720px){
+  .dashboard{ grid-template-columns: repeat(2, minmax(140px, 1fr)); }
+  .tabla-instituciones{ font-size: 13px; }
+  .tabla-instituciones thead th, .tabla-instituciones td{ padding: 8px 10px; }
+}
+@media (max-width: 480px){
+  .tabla-instituciones{ font-size: 12px; }
+  .table-container{ border-width: 1.5px; }
+}
