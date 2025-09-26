@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Geoportal — Instituciones Educativas</title>
 
-  <link rel="stylesheet" href="styles.css" />
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="styles.css">
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -24,28 +25,29 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
-  <!-- (Opcional) tu plugin de coordenadas si lo subes -->
+  <!-- (Opcional) plugin de coordenadas -->
   <link rel="stylesheet" href="latlontools/latlontools.css" onerror="this.remove()" />
   <script src="latlontools/latlontools.js" onerror="this.remove()"></script>
 
+  <!-- Preload de datos -->
+  <link rel="preload" href="provincias.geojson" as="fetch" crossorigin>
+
   <!-- App -->
   <script type="module" src="app.js"></script>
-
-  <link rel="preload" href="provincias.geojson" as="fetch" crossorigin>
 </head>
 <body>
-  <header>
+  <header class="app-header">
     <h1>Geoportal — Instituciones Educativas</h1>
 
     <div class="search-row">
       <input id="amieInput" placeholder="Buscar por AMIE o nombre" />
-      <button id="searchBtn">Buscar</button>
+      <button id="searchBtn" class="ghost-btn">Buscar</button>
+      <button id="themeToggle" class="ghost-btn" title="Cambiar tema">🌙</button>
     </div>
-
-    <button id="themeToggle" class="ghost-btn" title="Cambiar tema">🌙</button>
   </header>
 
   <main>
+    <!-- KPIs -->
     <section class="dashboard">
       <div class="card"><div class="kpi-label">Instituciones</div><div id="kpiTotal" class="kpi-value">—</div></div>
       <div class="card"><div class="kpi-label">Matriz</div><div id="kpiMatriz" class="kpi-value">—</div></div>
@@ -53,6 +55,7 @@
       <div class="card"><div class="kpi-label">Sostenimientos</div><div id="kpiSost" class="kpi-value">—</div></div>
     </section>
 
+    <!-- Filtros -->
     <section class="filters">
       <select id="provSelect"><option value="">Provincia</option></select>
       <select id="cantSelect"><option value="">Cantón</option></select>
@@ -63,10 +66,10 @@
         <option value="MATRIZ">MATRIZ</option>
         <option value="ESTABLECIMIENTO">ESTABLECIMIENTO</option>
       </select>
-      <button id="clearBtn">Limpiar</button>
+      <button id="clearBtn" class="ghost-btn">Limpiar</button>
     </section>
 
-    <!-- Herramientas tipo plugin -->
+    <!-- Herramientas -->
     <section class="tools">
       <button id="toolDropPoint" class="ghost-btn">📍 Fijar punto</button>
       <button id="toolDrawExtent" class="ghost-btn">⬛ Extent</button>
@@ -88,18 +91,34 @@
       </div>
     </section>
 
+    <!-- Mapa + Tabla -->
     <section class="content">
       <div id="map"></div>
+
       <div class="table-wrap">
-        <table id="tbl">
-          <thead>
-            <tr>
-              <th>AMIE</th><th>Nombre</th><th>Tipo</th>
-              <th>Sostenimiento</th><th>Provincia</th><th>Cantón</th><th>Parroquia</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-actions">
+          <button id="clearSelectionBtn" class="button-ghost" type="button">
+            Limpiar selección (0)
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table id="tbl" class="tabla-instituciones">
+            <thead>
+              <tr>
+                <th>AMIE</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Sostenimiento</th>
+                <th>Provincia</th>
+                <th>Cantón</th>
+                <th>Parroquia</th>
+              </tr>
+            </thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+
         <div class="pagination">
           <button id="prevPage" class="ghost-btn">◀</button>
           <span id="pageInfo">Página 1/1</span>
@@ -113,7 +132,10 @@
       </div>
     </section>
 
-    <div id="coordsBar" class="coords-bar">Lat: —  Lon: — (click para copiar)</div>
+    <div id="coordsBar" class="coords-bar">
+      Lat: —  Lon: — (click para copiar)
+    </div>
   </main>
 </body>
 </html>
+
