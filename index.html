@@ -1,49 +1,83 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Geoportal — Instituciones Educativas</title>
 
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css" />
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- PapaParse (CSV robusto) -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- PapaParse (CSV fallback) -->
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-  <header>
-    <h1>Geoportal — Instituciones Educativas</h1>
-    <div class="search-row">
-      <input id="searchInput" placeholder="Buscar por AMIE o nombre (ej: 09H06807)">
-      <button id="searchBtn">Buscar</button>
+  <!-- TOP NAV -->
+  <header class="nav">
+    <div class="brand">
+      <div class="dot"></div>
+      <span>Geoportal — IE Ecuador</span>
+    </div>
+    <div class="searchbar">
+      <input id="q-amie" type="text" placeholder="🔎 Buscar AMIE..." />
+      <input id="q-nombre" type="text" placeholder="🔎 Buscar nombre..." />
+      <button id="btn-buscar" class="btn primary">Buscar</button>
+      <button id="btn-limpiar" class="btn ghost">Limpiar</button>
     </div>
   </header>
 
-  <main>
-    <section class="dashboard">
-      <div class="card"><div class="kpi-label">Instituciones</div><div id="kpiTotal" class="kpi-value">—</div></div>
-      <div class="card"><div class="kpi-label">Matriz</div><div id="kpiMatriz" class="kpi-value">—</div></div>
-      <div class="card"><div class="kpi-label">Establecimiento</div><div id="kpiEst" class="kpi-value">—</div></div>
-      <div class="card"><div class="kpi-label">Sostenimientos</div><div id="kpiSost" class="kpi-value">—</div></div>
-    </section>
+  <!-- MAP + PANELS -->
+  <main class="stage">
+    <div id="map"></div>
 
-    <section class="filters">
-      <select id="provSelect"><option value="">Provincia</option></select>
-      <select id="cantSelect"><option value="">Cantón</option></select>
-      <select id="parrSelect"><option value="">Parroquia</option></select>
-      <select id="sostSelect"><option value="">Sostenimiento</option></select>
-      <select id="tipoSelect"><option value="">Tipo</option></select>
-      <button id="clearBtn">Limpiar</button>
-    </section>
+    <!-- FLOAT: Filters pill -->
+    <div class="pill filters">
+      <select id="f-provincia"><option value="">Provincia</option></select>
+      <select id="f-canton" disabled><option value="">Cantón</option></select>
+      <select id="f-parroquia" disabled><option value="">Parroquia</option></select>
+      <select id="f-sosten"><option value="">Sostenimiento</option></select>
+      <select id="f-tipo"><option value="">Tipo</option></select>
+    </div>
 
-    <section class="content">
-      <div id="map"></div>
+    <!-- FLOAT: KPI cards -->
+    <div class="kpis">
+      <div class="card">
+        <div class="k">Instituciones</div>
+        <div id="kpi-total" class="v">0</div>
+      </div>
+      <div class="card">
+        <div class="k">Provincias</div>
+        <div id="kpi-provincias" class="v">0</div>
+      </div>
+      <div class="card">
+        <div class="k">Tipos</div>
+        <div id="kpi-tipos" class="v">0</div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL (table) -->
+    <aside class="panel">
+      <div class="panel-head">
+        <strong>Listado</strong>
+        <div class="pager">
+          <button id="pg-prev" class="btn sm">◀</button>
+          <span><span id="pg-now">1</span>/<span id="pg-total">1</span></span>
+          <button id="pg-next" class="btn sm">▶</button>
+          <select id="pg-size" class="sm">
+            <option>25</option><option>50</option><option>100</option>
+          </select>
+        </div>
+      </div>
       <div class="table-wrap">
-        <table id="tbl">
+        <table id="grid">
           <thead>
             <tr>
               <th>AMIE</th><th>Nombre</th><th>Tipo</th>
@@ -53,17 +87,29 @@
           <tbody></tbody>
         </table>
       </div>
-    </section>
+      <div class="panel-foot">
+        <button id="btn-clear-selection" class="btn danger ghost">Limpiar selección (0)</button>
+      </div>
+    </aside>
+
+    <!-- FLOAT: action buttons (right) -->
+    <div class="fab-col">
+      <button class="fab" title="Ajustes">⚙️</button>
+      <button class="fab" title="Compartir">🔗</button>
+      <button class="fab" title="Ayuda">❓</button>
+    </div>
+
+    <!-- HUD bottom -->
+    <footer class="hud">
+      <div class="chip">Estado: <span id="status">Listo.</span></div>
+      <div class="chip">Cursor: <span id="cursor">—</span></div>
+      <div class="chip">Selección: <span id="selCount">0</span></div>
+    </footer>
   </main>
 
-  <!-- Supabase JS (debe ir antes de config y app) -->
+  <!-- Supabase + config + app -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- Tu configuración con las claves anon -->
   <script src="config.js"></script>
-
-  <!-- Tu app (si la usas como ES module puedes dejar type="module") -->
-  <script type="module" src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
-
