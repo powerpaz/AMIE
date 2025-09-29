@@ -4,16 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Geoportal — Instituciones Educativas</title>
+
   <link rel="stylesheet" href="styles.css">
+
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <!-- PapaParse (CSV robusto) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <!-- Config opcional: define window.env con SUPABASE_URL/KEY (anon). Es normal que 404 si no existe. -->
-  <script src="config.js" defer></script>
-  <!-- App -->
-  <script type="module" src="app.js"></script>
 </head>
 <body>
   <header>
@@ -26,22 +25,10 @@
 
   <main>
     <section class="dashboard">
-      <div class="card">
-        <div class="kpi-label">Instituciones</div>
-        <div id="kpiTotal" class="kpi-value">—</div>
-      </div>
-      <div class="card">
-        <div class="kpi-label">Matriz</div>
-        <div id="kpiMatriz" class="kpi-value">—</div>
-      </div>
-      <div class="card">
-        <div class="kpi-label">Establecimiento</div>
-        <div id="kpiEst" class="kpi-value">—</div>
-      </div>
-      <div class="card">
-        <div class="kpi-label">Sostenimientos</div>
-        <div id="kpiSost" class="kpi-value">—</div>
-      </div>
+      <div class="card"><div class="kpi-label">Instituciones</div><div id="kpiTotal" class="kpi-value">—</div></div>
+      <div class="card"><div class="kpi-label">Matriz</div><div id="kpiMatriz" class="kpi-value">—</div></div>
+      <div class="card"><div class="kpi-label">Establecimiento</div><div id="kpiEst" class="kpi-value">—</div></div>
+      <div class="card"><div class="kpi-label">Sostenimientos</div><div id="kpiSost" class="kpi-value">—</div></div>
     </section>
 
     <section class="filters">
@@ -68,5 +55,15 @@
       </div>
     </section>
   </main>
+
+  <!-- Supabase JS (debe ir antes de config y app) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Tu configuración con las claves anon -->
+  <script src="config.js"></script>
+
+  <!-- Tu app (si la usas como ES module puedes dejar type="module") -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
+
