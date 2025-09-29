@@ -131,3 +131,61 @@ body{
   .pill.filters{left:28px; right:28px; top:24px}
   #map{inset:12px 12px 170px 12px}
 }
+
+/* ======== FIX VISIBILIDAD DE FILTROS ======== */
+
+/* 1) La pastilla de filtros ocupa todo el ancho útil y permite scroll-x */
+.pill.filters{
+  left: 28px;
+  right: 28px;           /* ocupa todo el ancho del recuadro */
+  top: 24px;
+  max-width: none;
+  overflow-x: auto;      /* si no caben, aparece scroll horizontal */
+  overflow-y: hidden;
+  white-space: nowrap;   /* que no salte de línea el contenido */
+  z-index: 9999;         /* por encima de cualquier control del mapa */
+}
+
+/* Aspecto de los selects dentro de la pastilla */
+.pill.filters select{
+  min-width: 140px;      /* más compacto en desktop */
+  max-width: 220px;
+  padding: 8px 10px;
+  background:#111a25;
+  border:1px solid rgba(255,255,255,.18);
+  color:#e8f1ff;
+}
+
+/* 2) Mueve hacia abajo el control de capas para que no se superponga */
+.leaflet-top.leaflet-left{
+  top: 72px !important;  /* baja el botón de capas/zoom por debajo de la fila de filtros */
+}
+
+/* También separa un poco el control de escala del borde del recuadro */
+.leaflet-bottom.leaflet-left{
+  left: 22px !important;
+  bottom: 22px !important;
+}
+
+/* 3) Asegura que los dropdowns se muestren completos sobre el mapa */
+select, .pill.filters select, .leaflet-control-layers{
+  position: relative;
+  z-index: 9999;
+}
+
+/* 4) En pantallas angostas: filtros más altos y que el mapa deje espacio */
+@media (max-width: 1100px){
+  .pill.filters{
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    padding: 8px;
+  }
+  .pill.filters select{
+    min-width: 120px;
+  }
+  /* El recuadro del mapa deja más espacio abajo (ya lo tienes) */
+  #map{ inset:12px 12px 170px 12px; }
+  /* Baja aún más el control de capas para que no estorbe */
+  .leaflet-top.leaflet-left{ top: 96px !important; }
+}
