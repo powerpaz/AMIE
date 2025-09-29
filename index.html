@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Geoportal — Instituciones Educativas</title>
 
+  <!-- Estilos principales -->
   <link rel="stylesheet" href="styles.css">
 
   <!-- Leaflet -->
@@ -16,7 +17,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <!-- PapaParse (fallback CSV) -->
+  <!-- PapaParse (para CSV fallback) -->
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
@@ -106,9 +107,13 @@
     <span id="status">Listo.</span>
   </footer>
 
-  <!-- Supabase + configuración + app -->
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Configuración con tus credenciales -->
   <script src="config.js"></script>
+
+  <!-- Lógica principal -->
   <script src="app.js"></script>
 </body>
 </html>
