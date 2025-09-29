@@ -62,15 +62,27 @@ body{
   overflow:hidden;
 }
 
-/* Filtros en pastilla (ligeramente más claras) */
-.pill.filters{
-  position:absolute; top:24px; left:28px; display:flex; gap:8px; flex-wrap:wrap;
-  background:rgba(255,255,255,.10); border:1px solid var(--border);
-  border-radius:14px; padding:8px; box-shadow:var(--shadow); z-index:500;
+/* ======== VISIBILIDAD FILTROS MULTILÍNEA ======== */
+.pill.filters {
+  position:absolute;
+  top:24px; left:28px; right:28px;
+  display:flex; flex-wrap:wrap; gap:8px;
+  background:rgba(255,255,255,.10);
+  border:1px solid var(--border);
+  border-radius:14px; padding:8px;
+  box-shadow:var(--shadow);
+  z-index:9999;              /* siempre encima */
 }
-.pill select{
-  appearance:none; color:#e8f1ff; background:#111a25; border:1px solid var(--border);
-  border-radius:10px; padding:8px 10px; min-width:150px;
+
+.pill.filters select {
+  min-width: 140px;
+  max-width: 220px;
+  padding: 8px 10px;
+  background:#111a25;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:10px;
+  color:#e8f1ff;
+  flex:1;                    /* se adaptan al espacio disponible */
 }
 
 /* KPIs más contrastadas */
