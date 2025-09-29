@@ -1,13 +1,14 @@
 // ==========================
 //  AMIE Geoportal — app.js
-//  UI estilo navegación (oscuro) + Supabase v2
+//  Estilo navegación (oscuro) + Supabase v2
+//  Autodetección de columnas + carga en lotes
 // ==========================
 const TABLE = 'instituciones'; // nombre exacto en Supabase
 
 // ---- Estado UI ----
 let supa = null;
 let map, clusterLayer, markers = [];
-let dataCache = [];     // datos mostrados (para tabla y mapa)
+let dataCache = [];   // datos visibles (tabla + mapa)
 let selection = new Set();
 
 let pageNow = 1;
@@ -17,13 +18,41 @@ let pageTotal = 1;
 // ---- Utilitarios ----
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
 const fmt = (v) => (v ?? '');
 const uniq = (arr) => [...new Set(arr.filter(x => (x ?? '').toString().trim() !== ''))]
   .sort((a,b)=>`${a}`.localeCompare(`${b}`,'es'));
 
 function setStatus(msg){ $('#status').textContent = msg; }
 function setSelCount(){ $('#selCount').textContent = selection.size; }
+
+// ---- Resolución automática de nombres de columna ----
+const CANDIDATES = {
+  AMIE: ['AMIE','amie'],
+  Nombre: ['Nombre','nombre'],
+  Tipo: ['Tipo','tipo'],
+  Sostenimiento: ['Sostenimiento','sostenimiento'],
+  Provincia: ['Provincia','provincia'],
+  Canton: ['Canton','cantón','canton'],
+  Parroquia: ['Parroquia','parroquia'],
+  lat: ['lat','Lat','latitude','LAT'],
+  lon: ['lon','Lon','longitude','LON']
+};
+const COL = {}; // se llena al detectar
+
+function firstKey(obj, list){
+  for (const k of list) if (Object.prototype.hasOwnProperty.call(obj, k)) return k;
+  return list[0]; // fallback
+}
+function detectColumns(sampleRow){
+  for (const logical in CANDIDATES){
+    COL[logical] = firstKey(sampleRow, CANDIDATES[logical]);
+  }
+  console.log('🧭 Column map:', COL);
+}
+function v(obj, logical){
+  const k = COL[logical] ?? CANDIDATES[logical][0];
+  return obj?.[k];
+}
 
 // ---- Supabase init ----
 function getSupabase() {
@@ -34,49 +63,85 @@ function getSupabase() {
   return supa;
 }
 
-// ---- Carga de datos ----
-async function loadFromSupabase(filters = {}, paging = { page:1, pageSize: 10000 }) {
+// Detecta columnas consultando 1 fila
+async function ensureColumnsDetected() {
+  if (Object.keys(COL).length > 0) return;
   const client = getSupabase();
-  if (!client) throw new Error('Supabase no configurado');
-
-  let query = client.from(TABLE).select('*', { count: 'exact' });
-
-  if (filters.provincia)     query = query.eq('Provincia', filters.provincia);
-  if (filters.canton)        query = query.eq('Canton', filters.canton);
-  if (filters.parroquia)     query = query.eq('Parroquia', filters.parroquia);
-  if (filters.tipo)          query = query.eq('Tipo', filters.tipo);
-  if (filters.sostenimiento) query = query.eq('Sostenimiento', filters.sostenimiento);
-  if (filters.qAmie)         query = query.ilike('AMIE', `%${filters.qAmie}%`);
-  if (filters.qNombre)       query = query.ilike('Nombre', `%${filters.qNombre}%`);
-
-  const from = (paging.page - 1) * paging.pageSize;
-  const to   = from + paging.pageSize - 1;
-  const { data, error, count } = await query.range(from, to);
-
-  if (error) throw error;
-
-  const rows = (data ?? [])
-    .map(r => ({
-      AMIE: r.AMIE, Nombre: r.Nombre,
-      Tipo: r.Tipo, Sostenimiento: r.Sostenimiento,
-      Provincia: r.Provincia, Canton: r.Canton, Parroquia: r.Parroquia,
-      lat: parseFloat(r.lat), lon: parseFloat(r.lon)
-    }))
-    .filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
-
-  return { rows, total: count ?? rows.length };
+  const probe = await client.from(TABLE).select('*').limit(1);
+  if (probe.error) throw probe.error;
+  if ((probe.data?.length ?? 0) > 0) detectColumns(probe.data[0]);
+  else throw new Error('La tabla está vacía o no accesible (revisa RLS/políticas).');
 }
 
+// ---- Carga de datos (en lotes, usa columnas detectadas) ----
+async function fetchAllFromSupabase(filters = {}, chunkSize = 1000, hardCap = 20000) {
+  const client = getSupabase();
+  if (!client) throw new Error('Supabase no configurado');
+  await ensureColumnsDetected();
+
+  let all = [];
+  let from = 0;
+  let to   = from + chunkSize - 1;
+  let total = null;
+
+  // reconstruye la query base con filtros usando los nombres ya detectados
+  const buildQuery = () => {
+    let q = client.from(TABLE).select('*', { count: 'exact' });
+    if (filters.provincia)     q = q.eq(COL.Provincia, filters.provincia);
+    if (filters.canton)        q = q.eq(COL.Canton, filters.canton);
+    if (filters.parroquia)     q = q.eq(COL.Parroquia, filters.parroquia);
+    if (filters.tipo)          q = q.eq(COL.Tipo, filters.tipo);
+    if (filters.sostenimiento) q = q.eq(COL.Sostenimiento, filters.sostenimiento);
+    if (filters.qAmie)         q = q.ilike(COL.AMIE, `%${filters.qAmie}%`);
+    if (filters.qNombre)       q = q.ilike(COL.Nombre, `%${filters.qNombre}%`);
+    return q;
+  };
+
+  while (all.length < hardCap) {
+    const { data, error, count } = await buildQuery().range(from, to);
+    if (error) throw error;
+    if (total === null) total = count ?? 0;
+    const batch = (data ?? []).map(r => ({
+      AMIE: v(r,'AMIE'),
+      Nombre: v(r,'Nombre'),
+      Tipo: v(r,'Tipo'),
+      Sostenimiento: v(r,'Sostenimiento'),
+      Provincia: v(r,'Provincia'),
+      Canton: v(r,'Canton'),
+      Parroquia: v(r,'Parroquia'),
+      lat: parseFloat(v(r,'lat')),
+      lon: parseFloat(v(r,'lon'))
+    })).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
+
+    all.push(...batch);
+    if (!data || data.length < chunkSize) break; // último lote
+    from += chunkSize;
+    to   += chunkSize;
+  }
+
+  return { rows: all, total: total ?? all.length };
+}
+
+// Fallback CSV local (usa mapeo flexible)
 function loadFromCSV(path) {
   return new Promise((resolve, reject) => {
     Papa.parse(path, {
       header: true, download: true,
       complete: (res) => {
+        const first = res.data?.[0] || {};
+        if (Object.keys(COL).length === 0 && Object.keys(first).length) {
+          detectColumns(first);
+        }
         const rows = res.data.map(r => ({
-          AMIE: r.AMIE, Nombre: r.Nombre, Tipo: r.Tipo, Sostenimiento: r.Sostenimiento,
-          Provincia: r.Provincia, Canton: r.Canton, Parroquia: r.Parroquia,
-          lat: parseFloat(r.lat || r.Lat || r.latitude),
-          lon: parseFloat(r.lon || r.Lon || r.longitude)
+          AMIE: r[COL.AMIE] ?? r.AMIE,
+          Nombre: r[COL.Nombre] ?? r.Nombre,
+          Tipo: r[COL.Tipo] ?? r.Tipo,
+          Sostenimiento: r[COL.Sostenimiento] ?? r.Sostenimiento,
+          Provincia: r[COL.Provincia] ?? r.Provincia,
+          Canton: r[COL.Canton] ?? r.Canton,
+          Parroquia: r[COL.Parroquia] ?? r.Parroquia,
+          lat: parseFloat(r[COL.lat] ?? r.lat ?? r.Lat ?? r.latitude),
+          lon: parseFloat(r[COL.lon] ?? r.lon ?? r.Lon ?? r.longitude)
         })).filter(r => Number.isFinite(r.lat) && Number.isFinite(r.lon));
         resolve({ rows, total: rows.length });
       },
@@ -85,10 +150,11 @@ function loadFromCSV(path) {
   });
 }
 
+// Carga inicial: intenta Supabase (en lotes), si falla usa CSV local
 async function loadDataInitial() {
   setStatus('Cargando datos...');
   try {
-    const { rows, total } = await loadFromSupabase({}, { page:1, pageSize:10000 });
+    const { rows, total } = await fetchAllFromSupabase({}, 1000, 20000);
     dataCache = rows;
     updateKPIs(rows);
     drawAll(rows, true);
@@ -107,18 +173,20 @@ async function loadDataInitial() {
 async function fillDistinctFilters() {
   const c = getSupabase();
   if (!c) return;
+  await ensureColumnsDetected();
 
-  // Provincia
-  let { data: provs } = await c.from(TABLE).select('Provincia', { distinct: true }).order('Provincia', { ascending:true });
-  putOptions($('#f-provincia'), ['Provincia'].concat(uniq((provs||[]).map(r=>r.Provincia))));
+  const pCol = COL.Provincia || 'Provincia';
+  const sCol = COL.Sostenimiento || 'Sostenimiento';
+  const tCol = COL.Tipo || 'Tipo';
 
-  // Sostenimiento
-  let { data: sosts } = await c.from(TABLE).select('Sostenimiento', { distinct: true }).order('Sostenimiento', { ascending:true });
-  putOptions($('#f-sosten'), ['Sostenimiento'].concat(uniq((sosts||[]).map(r=>r.Sostenimiento))));
+  let { data: provs } = await c.from(TABLE).select(pCol, { distinct: true }).order(pCol, { ascending:true });
+  putOptions($('#f-provincia'), ['Provincia'].concat(uniq((provs||[]).map(r=>r[pCol]))));
 
-  // Tipo
-  let { data: tipos } = await c.from(TABLE).select('Tipo', { distinct: true }).order('Tipo', { ascending:true });
-  putOptions($('#f-tipo'), ['Tipo'].concat(uniq((tipos||[]).map(r=>r.Tipo))));
+  let { data: sosts } = await c.from(TABLE).select(sCol, { distinct: true }).order(sCol, { ascending:true });
+  putOptions($('#f-sosten'), ['Sostenimiento'].concat(uniq((sosts||[]).map(r=>r[sCol]))));
+
+  let { data: tipos } = await c.from(TABLE).select(tCol, { distinct: true }).order(tCol, { ascending:true });
+  putOptions($('#f-tipo'), ['Tipo'].concat(uniq((tipos||[]).map(r=>r[tCol]))));
 }
 
 async function updateCantones(provincia) {
@@ -128,8 +196,10 @@ async function updateCantones(provincia) {
   putOptions($('#f-canton'), ['Cantón']);
   putOptions($('#f-parroquia'), ['Parroquia']);
   if (!c || !provincia) return;
-  const { data } = await c.from(TABLE).select('Canton', { distinct:true }).eq('Provincia', provincia).order('Canton');
-  putOptions($('#f-canton'), ['Cantón'].concat(uniq((data||[]).map(r=>r.Canton))));
+  const pCol = COL.Provincia || 'Provincia';
+  const cCol = COL.Canton || 'Canton';
+  const { data } = await c.from(TABLE).select(cCol, { distinct:true }).eq(pCol, provincia).order(cCol);
+  putOptions($('#f-canton'), ['Cantón'].concat(uniq((data||[]).map(r=>r[cCol]))));
 }
 
 async function updateParroquias(provincia, canton) {
@@ -137,9 +207,12 @@ async function updateParroquias(provincia, canton) {
   $('#f-parroquia').disabled = !(provincia && canton);
   putOptions($('#f-parroquia'), ['Parroquia']);
   if (!c || !(provincia && canton)) return;
-  const { data } = await c.from(TABLE).select('Parroquia', { distinct:true })
-    .eq('Provincia', provincia).eq('Canton', canton).order('Parroquia');
-  putOptions($('#f-parroquia'), ['Parroquia'].concat(uniq((data||[]).map(r=>r.Parroquia))));
+  const pCol = COL.Provincia || 'Provincia';
+  const cCol = COL.Canton || 'Canton';
+  const qCol = COL.Parroquia || 'Parroquia';
+  const { data } = await c.from(TABLE).select(qCol, { distinct:true })
+    .eq(pCol, provincia).eq(cCol, canton).order(qCol);
+  putOptions($('#f-parroquia'), ['Parroquia'].concat(uniq((data||[]).map(r=>r[qCol]))));
 }
 
 function putOptions(select, values) {
@@ -232,14 +305,6 @@ function renderTable(rows) {
   });
 }
 
-const blueIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconSize: [25,41], iconAnchor:[12,41], popupAnchor:[1,-34],
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
-});
-// en drawAll(): const m = L.marker([r.lat, r.lon], { icon: blueIcon, title: ... });
-
-
 function flyTo(r) {
   map.setView([r.lat, r.lon], 14);
   const mk = markers.find(x => x.r.AMIE === r.AMIE);
@@ -296,7 +361,7 @@ $('#pg-size').addEventListener('change', () => { pageSize = parseInt($('#pg-size
 
 $('#btn-clear-selection').addEventListener('click', () => { selection.clear(); setSelCount(); });
 
-// ---- Consulta con filtros y dibujar ----
+// ---- Consulta con filtros y dibujar (usa carga en lotes) ----
 async function doQueryAndDraw() {
   const filters = {
     provincia: $('#f-provincia').value || '',
@@ -310,7 +375,7 @@ async function doQueryAndDraw() {
 
   setStatus('Consultando...');
   try {
-    const { rows, total } = await loadFromSupabase(filters, { page:1, pageSize:10000 });
+    const { rows, total } = await fetchAllFromSupabase(filters, 1000, 20000);
     dataCache = rows;
     drawAll(rows, true);
     setStatus(`Consulta OK (${total})`);
@@ -323,7 +388,10 @@ async function doQueryAndDraw() {
 // ---- Boot ----
 (async function boot(){
   initMap();
-  await fillDistinctFilters();
+  try {
+    await fillDistinctFilters();
+  } catch (e) {
+    console.warn('No se pudieron llenar filtros desde Supabase aún:', e.message);
+  }
   await loadDataInitial();
 })();
-
