@@ -1,14 +1,17 @@
 // ==========================
 //  AMIE Geoportal — app.js
-//  Menos oscuro + basemaps (OSM, Satélite, Dark) + recuadro
-//  Supabase v2 + autodetección de columnas + provincias GeoJSON
+//  Basemaps (OSM/Satélite/Dark) + Provincias GeoJSON
+//  Supabase v2 + autodetección columnas + carga en lotes
+//  Filtros poblados desde memoria (todas las provincias)
 // ==========================
 const TABLE = 'instituciones';
 
 let supa = null;
 let map, clusterLayer, markers = [];
 let provinceLayer = null;
-let dataCache = [];
+
+let dataCache = [];   // datos visibles (tabla + mapa)
+let allCache  = [];   // 🔹 universo completo para poblar filtros
 let selection = new Set();
 
 let pageNow = 1, pageSize = 25, pageTotal = 1;
@@ -109,6 +112,53 @@ function loadFromCSV(path){
   });
 }
 
+// ---------- filtros desde memoria ----------
+function fillFiltersFromRows(rows){
+  const provs = uniq(rows.map(r=>r.Provincia));
+  const soss  = uniq(rows.map(r=>r.Sostenimiento));
+  const tipos = uniq(rows.map(r=>r.Tipo));
+
+  putOptions($('#f-provincia'), ['Provincia', ...provs]);
+  putOptions($('#f-sosten'),   ['Sostenimiento', ...soss]);
+  putOptions($('#f-tipo'),     ['Tipo', ...tipos]);
+
+  putOptions($('#f-canton'),   ['Cantón']);
+  putOptions($('#f-parroquia'),['Parroquia']);
+  $('#f-canton').disabled = true;
+  $('#f-parroquia').disabled = true;
+}
+
+async function updateCantones(provincia) {
+  $('#f-canton').disabled = !provincia;
+  $('#f-parroquia').disabled = true;
+  putOptions($('#f-canton'), ['Cantón']);
+  putOptions($('#f-parroquia'), ['Parroquia']);
+  if (!provincia) return;
+
+  const cantones = uniq(allCache.filter(r => r.Provincia === provincia).map(r => r.Canton));
+  putOptions($('#f-canton'), ['Cantón', ...cantones]);
+}
+
+async function updateParroquias(provincia, canton) {
+  $('#f-parroquia').disabled = !(provincia && canton);
+  putOptions($('#f-parroquia'), ['Parroquia']);
+  if (!(provincia && canton)) return;
+
+  const parroqs = uniq(allCache
+    .filter(r => r.Provincia === provincia && r.Canton === canton)
+    .map(r => r.Parroquia));
+  putOptions($('#f-parroquia'), ['Parroquia', ...parroqs]);
+}
+
+function putOptions(select, values){
+  select.innerHTML='';
+  values.forEach(v=>{
+    const opt=document.createElement('option');
+    opt.value=(['Provincia','Cantón','Parroquia','Tipo','Sostenimiento'].includes(v)?'':v);
+    opt.textContent=v; select.appendChild(opt);
+  });
+}
+
 // ---------- provincias ----------
 async function loadProvincias(){
   try{
@@ -133,61 +183,6 @@ function highlightProvincia(nombre){
   }));
 }
 
-// ---------- inicial ----------
-async function loadDataInitial(){
-  setStatus('Cargando datos...');
-  try{
-    const {rows,total}=await fetchAllFromSupabase({},1000,20000);
-    dataCache=rows; updateKPIs(rows); drawAll(rows,true);
-    setStatus(`Listo. Registros: ${total}`);
-  }catch(e){
-    console.warn('⚠️ Supabase falló, CSV local:',e.message);
-    const {rows,total}=await loadFromCSV('data/instituciones_geo_fixed.csv');
-    dataCache=rows; updateKPIs(rows); drawAll(rows,true);
-    setStatus(`Modo CSV local. Registros: ${total}`);
-  }
-}
-
-// ---------- filtros ----------
-async function fillDistinctFilters(){
-  const c=getSupabase(); if(!c) return; await ensureColumnsDetected();
-  const pCol=COL.Provincia, sCol=COL.Sostenimiento, tCol=COL.Tipo;
-
-  let {data:provs}=await c.from(TABLE).select(pCol,{distinct:true}).order(pCol,{ascending:true});
-  putOptions($('#f-provincia'),['Provincia'].concat(uniq((provs||[]).map(r=>r[pCol]))));
-
-  let {data:sosts}=await c.from(TABLE).select(sCol,{distinct:true}).order(sCol,{ascending:true});
-  putOptions($('#f-sosten'),['Sostenimiento'].concat(uniq((sosts||[]).map(r=>r[sCol]))));
-
-  let {data:tipos}=await c.from(TABLE).select(tCol,{distinct:true}).order(tCol,{ascending:true});
-  putOptions($('#f-tipo'),['Tipo'].concat(uniq((tipos||[]).map(r=>r[tCol]))));
-}
-async function updateCantones(prov){
-  const c=getSupabase();
-  $('#f-canton').disabled=!prov; $('#f-parroquia').disabled=true;
-  putOptions($('#f-canton'),['Cantón']); putOptions($('#f-parroquia'),['Parroquia']);
-  if(!c||!prov) return;
-  const {data}=await c.from(TABLE).select(COL.Canton,{distinct:true}).eq(COL.Provincia,prov).order(COL.Canton);
-  putOptions($('#f-canton'),['Cantón'].concat(uniq((data||[]).map(r=>r[COL.Canton]))));
-}
-async function updateParroquias(prov,cant){
-  const c=getSupabase();
-  $('#f-parroquia').disabled=!(prov&&cant);
-  putOptions($('#f-parroquia'),['Parroquia']);
-  if(!c||!(prov&&cant)) return;
-  const {data}=await c.from(TABLE).select(COL.Parroquia,{distinct:true})
-    .eq(COL.Provincia,prov).eq(COL.Canton,cant).order(COL.Parroquia);
-  putOptions($('#f-parroquia'),['Parroquia'].concat(uniq((data||[]).map(r=>r[COL.Parroquia]))));
-}
-function putOptions(select, values){
-  select.innerHTML='';
-  values.forEach(v=>{
-    const opt=document.createElement('option');
-    opt.value=(['Provincia','Cantón','Parroquia','Tipo','Sostenimiento'].includes(v)?'':v);
-    opt.textContent=v; select.appendChild(opt);
-  });
-}
-
 // ---------- mapa + capas base ----------
 let baseLayersRef = {};
 function initMap(){
@@ -197,26 +192,20 @@ function initMap(){
   const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'&copy; OpenStreetMap contributors'
   });
-
   const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
     attribution:'Tiles &copy; Esri'
   });
-
   const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
     attribution:'&copy; OpenStreetMap, &copy; CARTO'
   });
 
-  // Default: OSM (más visible)
-  osm.addTo(map);
+  osm.addTo(map); // default
 
-  // guardar referencias para control
   baseLayersRef = {
     'OpenStreetMap': osm,
     'Satélite (Esri)': esriSat,
     'Dark (Carto)': cartoDark
   };
-
-  // control de capas base
   L.control.layers(baseLayersRef, null, { position:'topleft', collapsed:true }).addTo(map);
   L.control.zoom({ position:'topleft' }).addTo(map);
   L.control.scale({ imperial:false }).addTo(map);
@@ -271,27 +260,57 @@ function updateKPIs(rows){
   $('#kpi-tipos').textContent=uniq(rows.map(r=>r.Tipo)).length;
 }
 
+// ---------- carga inicial ----------
+async function loadDataInitial(){
+  setStatus('Cargando datos...');
+  try{
+    const {rows,total}=await fetchAllFromSupabase({},1000,20000);
+    allCache  = rows.slice();      // 🔹 guarda universo
+    dataCache = rows.slice();
+    updateKPIs(rows); drawAll(rows,true);
+    fillFiltersFromRows(allCache); // 🔹 pobla filtros con TODO
+    setStatus(`Listo. Registros: ${total}`);
+  }catch(e){
+    console.warn('⚠️ Supabase falló, CSV local:',e.message);
+    const {rows,total}=await loadFromCSV('data/instituciones_geo_fixed.csv');
+    allCache  = rows.slice();
+    dataCache = rows.slice();
+    updateKPIs(rows); drawAll(rows,true);
+    fillFiltersFromRows(allCache);
+    setStatus(`Modo CSV local. Registros: ${total}`);
+  }
+}
+
 // ---------- eventos ----------
 $('#btn-limpiar').addEventListener('click', async ()=>{
   $('#f-provincia').value=''; $('#f-canton').value=''; $('#f-parroquia').value='';
-  $('#f-canton').disabled=true; $('#f-parroquia').disabled=true;
   $('#f-sosten').value=''; $('#f-tipo').value='';
   $('#q-amie').value=''; $('#q-nombre').value='';
+  $('#f-canton').disabled=true; $('#f-parroquia').disabled=true;
   highlightProvincia('');
+  fillFiltersFromRows(allCache);      // 🔹 repobla combos completos
   await doQueryAndDraw();
 });
+
 $('#f-provincia').addEventListener('change', async (e)=>{
-  const prov=e.target.value||''; await updateCantones(prov); await doQueryAndDraw(); highlightProvincia(prov);
+  const prov=e.target.value||'';
+  await updateCantones(prov);
+  await doQueryAndDraw();
+  highlightProvincia(prov);
 });
+
 $('#f-canton').addEventListener('change', async (e)=>{
-  await updateParroquias($('#f-provincia').value||'', e.target.value||''); await doQueryAndDraw();
+  await updateParroquias($('#f-provincia').value||'', e.target.value||'');
+  await doQueryAndDraw();
 });
 $('#f-parroquia').addEventListener('change', doQueryAndDraw);
 $('#f-sosten').addEventListener('change', doQueryAndDraw);
 $('#f-tipo').addEventListener('change', doQueryAndDraw);
+
 $('#btn-buscar').addEventListener('click', doQueryAndDraw);
 $('#q-amie').addEventListener('keyup', (e)=>{ if(e.key==='Enter') doQueryAndDraw(); });
 $('#q-nombre').addEventListener('keyup', (e)=>{ if(e.key==='Enter') doQueryAndDraw(); });
+
 $('#pg-prev').addEventListener('click', ()=>{ if(pageNow>1){ pageNow--; renderTable(dataCache);} });
 $('#pg-next').addEventListener('click', ()=>{ if(pageNow<pageTotal){ pageNow++; renderTable(dataCache);} });
 $('#pg-size').addEventListener('change', ()=>{ pageSize=parseInt($('#pg-size').value,10)||25; pageNow=1; renderTable(dataCache); });
@@ -320,6 +339,6 @@ async function doQueryAndDraw(){
 // ---------- boot ----------
 (async function boot(){
   initMap();
-  try{ await fillDistinctFilters(); }catch(e){ console.warn('No se pudieron llenar filtros:',e.message); }
+  // ya no llenamos filtros vía Supabase distinct; se llenan tras la carga inicial
   await loadDataInitial();
 })();
