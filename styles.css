@@ -1,0 +1,75 @@
+:root{
+  --accent:#1DB954; --bg:#FFFFFF; --text:#000000; --muted:#6b7280;
+  --border-w:2px; --radius:10px; --shadow:0 2px 10px rgba(0,0,0,.06);
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; color:var(--text); background:var(--bg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans","Helvetica Neue",sans-serif;
+}
+
+/* Estructura */
+header{ padding:12px; }
+header h1{ margin:0 0 10px; font-size:28px; }
+.search-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.dashboard,.filters,.tools{ padding:0 12px 8px; }
+.kpi-label{ color:var(--muted); font-size:12px; }
+.kpi-value{ font-weight:800; font-size:22px; }
+.card{ background:#fff; border:1px solid #eee; border-radius:10px; padding:10px 12px; box-shadow:var(--shadow); }
+.dashboard{ display:grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap:10px; }
+
+.content{ display:grid; grid-template-columns: 1fr 520px; gap:12px; padding:12px; }
+#map{ min-height:520px; height:60vh; border:1px solid #e6e6e6; border-radius:8px; }
+.coords-bar{ padding:8px 12px; font-size:13px; color:#555; }
+
+/* Botones */
+.ghost-btn{ padding:6px 10px; border-radius:8px; cursor:pointer; background:#fff; border:1px solid #ddd; }
+.ghost-btn:hover{ background:#f6f6f6; }
+
+/* Tabla (verde Spotify) */
+.table-wrap{ display:flex; flex-direction:column; gap:10px; }
+.table-actions{ display:flex; gap:8px; align-items:center; }
+.button-ghost{
+  border:var(--border-w) solid var(--accent); background:#fff; color:#000; padding:8px 12px;
+  border-radius:8px; cursor:pointer; font-weight:600;
+}
+.button-ghost:hover{ background:#EAFBEF; }
+
+.table-container{
+  width:100%; overflow:auto; border:var(--border-w) solid var(--accent);
+  border-radius:var(--radius); background:var(--bg); box-shadow:var(--shadow);
+}
+
+.tabla-instituciones{ width:100%; border-collapse:collapse; background:#fff; color:#000; font-size:14px; line-height:1.35; }
+.tabla-instituciones, .tabla-instituciones th, .tabla-instituciones td{ border:var(--border-w) solid var(--accent); }
+
+/* Encabezado */
+.tabla-instituciones thead th{
+  position:sticky; top:0; z-index:2; background:var(--accent); color:#FFFFFF;
+  text-align:left; font-weight:700; letter-spacing:.2px; padding:10px 12px; white-space:nowrap;
+}
+
+/* Celdas */
+.tabla-instituciones td{ padding:10px 12px; vertical-align:top; background:#FFFFFF; color:#000000; }
+
+/* Alternado y hover */
+.tabla-instituciones tbody tr:nth-child(even) td{ background:#FAFFFB; }
+.tabla-instituciones tbody tr:hover td{ background:#EAFBEF; }
+
+/* Selección por click */
+.tabla-instituciones tbody tr.is-selected td{ background:#1DB954 !important; color:#FFFFFF !important; }
+
+/* Paginación */
+.pagination{ display:flex; gap:8px; align-items:center; padding:6px 0; }
+
+/* Responsive */
+@media (max-width:1100px){ .content{ grid-template-columns:1fr; } #map{ height:50vh; } }
+@media (max-width:720px){
+  .dashboard{ grid-template-columns:repeat(2, minmax(140px,1fr)); }
+  .tabla-instituciones{ font-size:13px; }
+  .tabla-instituciones thead th, .tabla-instituciones td{ padding:8px 10px; }
+}
+@media (max-width:480px){
+  .tabla-instituciones{ font-size:12px; }
+  .table-container{ border-width:1.5px; }
+}
+
