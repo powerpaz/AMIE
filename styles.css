@@ -54,7 +54,6 @@ body{
 /* Mapa en recuadro */
 #map{
   position:absolute;
-  /* deja respiración para ver el recuadro aunque haya paneles encima */
   inset:12px 12px 86px 12px;      /* top right bottom left */
   border-radius:18px;
   border:1px solid rgba(255,255,255,.18);
@@ -62,27 +61,32 @@ body{
   overflow:hidden;
 }
 
-/* ======== VISIBILIDAD FILTROS MULTILÍNEA ======== */
-.pill.filters {
+/* ======== VISIBILIDAD FILTROS (FINAL) ======== */
+.pill.filters{
   position:absolute;
   top:24px; left:28px; right:28px;
-  display:flex; flex-wrap:wrap; gap:8px;
+  display:flex;
+  flex-wrap:wrap;          /* 👉 cambia a varias filas cuando no caben */
+  gap:8px 10px;            /* row-gap / column-gap */
+  align-items:flex-start;
   background:rgba(255,255,255,.10);
   border:1px solid var(--border);
-  border-radius:14px; padding:8px;
+  border-radius:14px;
+  padding:8px;
   box-shadow:var(--shadow);
-  z-index:9999;              /* siempre encima */
+  z-index:9999;            /* siempre encima */
+  overflow:visible;        /* dropdowns no se cortan */
+  white-space:normal;      /* 👉 permite salto de línea */
 }
 
-.pill.filters select {
-  min-width: 140px;
-  max-width: 220px;
-  padding: 8px 10px;
+.pill.filters select{
+  flex:1 1 160px;          /* base 160px, crece o reduce */
+  max-width:240px;
+  padding:8px 10px;
   background:#111a25;
   border:1px solid rgba(255,255,255,.18);
   border-radius:10px;
   color:#e8f1ff;
-  flex:1;                    /* se adaptan al espacio disponible */
 }
 
 /* KPIs más contrastadas */
@@ -97,7 +101,7 @@ body{
 .card .k{color:var(--text-muted); font-size:12px}
 .card .v{font-size:20px; font-weight:700; letter-spacing:.2px}
 
-/* Panel derecho (ligero) */
+/* Panel derecho */
 .panel{
   position:absolute; top:110px; right:28px; bottom:98px; width:420px; z-index:520;
   background:rgba(15,22,32,.95); border:1px solid var(--border); border-radius:var(--radius);
@@ -125,7 +129,7 @@ body{
   background:#101a28; color:#e6f0ff; cursor:pointer; box-shadow:var(--shadow)
 }
 
-/* HUD inferior (chips claros) */
+/* HUD inferior */
 .hud{
   position:absolute; left:50%; transform:translateX(-50%); bottom:24px;
   display:flex; gap:10px; z-index:540;
@@ -136,68 +140,25 @@ body{
   padding:9px 12px; border-radius:14px; box-shadow:0 8px 18px rgba(0,0,0,.2)
 }
 
+/* Ajustes Leaflet para no tapar filtros */
+.leaflet-top.leaflet-left{
+  top: 88px !important;
+}
+.leaflet-control-layers,
+.leaflet-control-zoom{
+  z-index:5000;
+}
+.leaflet-bottom.leaflet-left{
+  left:22px !important;
+  bottom:22px !important;
+}
+
 /* Responsive */
 @media (max-width: 1100px){
   .panel{width:92vw; right:4vw; top:auto; height:46vh}
   .kpis{left:28px; right:auto; top:auto; bottom:112px}
-  .pill.filters{left:28px; right:28px; top:24px}
+  .pill.filters{top:16px; left:16px; right:16px; padding:8px; gap:6px 8px;}
+  .pill.filters select{flex:1 1 140px; max-width:200px;}
   #map{inset:12px 12px 170px 12px}
-}
-
-/* ======== FIX VISIBILIDAD DE FILTROS ======== */
-
-/* 1) La pastilla de filtros ocupa todo el ancho útil y permite scroll-x */
-.pill.filters{
-  left: 28px;
-  right: 28px;           /* ocupa todo el ancho del recuadro */
-  top: 24px;
-  max-width: none;
-  overflow-x: auto;      /* si no caben, aparece scroll horizontal */
-  overflow-y: hidden;
-  white-space: nowrap;   /* que no salte de línea el contenido */
-  z-index: 9999;         /* por encima de cualquier control del mapa */
-}
-
-/* Aspecto de los selects dentro de la pastilla */
-.pill.filters select{
-  min-width: 140px;      /* más compacto en desktop */
-  max-width: 220px;
-  padding: 8px 10px;
-  background:#111a25;
-  border:1px solid rgba(255,255,255,.18);
-  color:#e8f1ff;
-}
-
-/* 2) Mueve hacia abajo el control de capas para que no se superponga */
-.leaflet-top.leaflet-left{
-  top: 72px !important;  /* baja el botón de capas/zoom por debajo de la fila de filtros */
-}
-
-/* También separa un poco el control de escala del borde del recuadro */
-.leaflet-bottom.leaflet-left{
-  left: 22px !important;
-  bottom: 22px !important;
-}
-
-/* 3) Asegura que los dropdowns se muestren completos sobre el mapa */
-select, .pill.filters select, .leaflet-control-layers{
-  position: relative;
-  z-index: 9999;
-}
-
-/* 4) En pantallas angostas: filtros más altos y que el mapa deje espacio */
-@media (max-width: 1100px){
-  .pill.filters{
-    top: 16px;
-    left: 16px;
-    right: 16px;
-    padding: 8px;
-  }
-  .pill.filters select{
-    min-width: 120px;
-  }
-  /* El recuadro del mapa deja más espacio abajo (ya lo tienes) */
-  #map{ inset:12px 12px 170px 12px; }
-  /* Baja aún más el control de capas para que no estorbe */
-  .leaflet-top.leaflet-left{ top: 96px !important; }
+  .leaflet-top.leaflet-left{ top:100px !important; }
 }
