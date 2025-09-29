@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Geoportal — Instituciones Educativas</title>
+
+  <!-- Estilos principales -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- PapaParse (para CSV fallback) -->
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Geoportal — Instituciones Educativas (EC)</h1>
+    <div id="kpis">
+      <span id="kpi-total">Total: 0</span>
+      <span id="kpi-provincias">Provincias: 0</span>
+      <span id="kpi-tipos">Tipos: 0</span>
+    </div>
+  </header>
+
+  <section class="controls">
+    <div class="filters">
+      <label>Provincia
+        <select id="f-provincia">
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>Cantón
+        <select id="f-canton" disabled>
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <label>Parroquia
+        <select id="f-parroquia" disabled>
+          <option value="">Todas</option>
+        </select>
+      </label>
+      <label>Sostenimiento
+        <select id="f-sosten">
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <label>Tipo
+        <select id="f-tipo">
+          <option value="">Todos</option>
+        </select>
+      </label>
+      <button id="btn-limpiar">Limpiar</button>
+    </div>
+
+    <div class="search">
+      <input id="q-amie" type="text" placeholder="Buscar por AMIE..." />
+      <input id="q-nombre" type="text" placeholder="Buscar por nombre..." />
+      <button id="btn-buscar">Buscar</button>
+    </div>
+  </section>
+
+  <main class="layout">
+    <div id="map"></div>
+
+    <aside class="panel">
+      <div class="panel-head">
+        <button id="btn-clear-selection">Limpiar selección (0)</button>
+        <div class="pager">
+          <button id="pg-prev">◀</button>
+          <span>Página <span id="pg-now">1</span>/<span id="pg-total">1</span></span>
+          <button id="pg-next">▶</button>
+          <select id="pg-size">
+            <option>25</option>
+            <option>50</option>
+            <option>100</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="grid">
+          <thead>
+            <tr>
+              <th>AMIE</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Sostenimiento</th>
+              <th>Provincia</th>
+              <th>Cantón</th>
+              <th>Parroquia</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span id="status">Listo.</span>
+  </footer>
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Configuración con tus credenciales -->
+  <script src="config.js"></script>
+
+  <!-- Lógica principal -->
+  <script src="app.js"></script>
+</body>
+</html>
