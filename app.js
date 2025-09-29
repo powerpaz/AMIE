@@ -232,6 +232,14 @@ function renderTable(rows) {
   });
 }
 
+const blueIcon = new L.Icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconSize: [25,41], iconAnchor:[12,41], popupAnchor:[1,-34],
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
+});
+// en drawAll(): const m = L.marker([r.lat, r.lon], { icon: blueIcon, title: ... });
+
+
 function flyTo(r) {
   map.setView([r.lat, r.lon], 14);
   const mk = markers.find(x => x.r.AMIE === r.AMIE);
