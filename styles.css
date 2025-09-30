@@ -162,3 +162,29 @@ body{
   #map{inset:12px 12px 170px 12px}
   .leaflet-top.leaflet-left{ top:100px !important; }
 }
+
+/* ============ Transform Panel ============ */
+.transform-panel{
+  position:absolute; left:28px; bottom:112px; width:460px;
+  background:rgba(15,22,32,.96); border:1px solid var(--border);
+  border-radius:14px; box-shadow:var(--shadow); z-index:540;
+  color:#e8f1ff; backdrop-filter:blur(6px);
+}
+.tp-head{display:flex;justify-content:space-between;align-items:center;
+  padding:10px 12px; background:#0f1a28; border-bottom:1px solid var(--border)}
+.tp-actions{display:flex; gap:6px}
+.tp-body{padding:10px 12px}
+.tp-row{margin-bottom:10px}
+.tp-row label{display:block; font-size:12px; color:var(--text-muted); margin-bottom:6px}
+.tp-grid{display:grid; grid-template-columns: 1fr 1fr; gap:8px}
+.tp-grid.tp-6{grid-template-columns: repeat(6, 1fr);}
+.tp-grid.tp-4{grid-template-columns: 80px 60px 1fr 1fr;}
+.transform-panel input, .transform-panel select{
+  background:#111a25; border:1px solid rgba(255,255,255,.18);
+  color:#e8f1ff; border-radius:10px; padding:8px 10px; outline:none;
+}
+.tp-hint small{color:#b9c4d1}
+@media (max-width: 1100px){
+  .transform-panel{left:16px; right:16px; width:auto; bottom:176px}
+}
+
