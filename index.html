@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<!-- Proj4 para transformaciones de proyecciones (UTM, etc.) -->
+<script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
+
   <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
@@ -37,6 +41,57 @@
   <!-- MAP + PANELS -->
   <main class="stage">
     <div id="map"></div>
+
+<!-- Panel de Transformación de Coordenadas -->
+<div class="transform-panel" id="transform-panel">
+  <div class="tp-head">
+    <strong>Transformación</strong>
+    <div class="tp-actions">
+      <button class="btn sm ghost" id="tp-btn-center">Ir</button>
+      <button class="btn sm ghost" id="tp-btn-pin">Fijar punto</button>
+      <button class="btn sm ghost" id="tp-btn-copy">Copiar</button>
+    </div>
+  </div>
+  <div class="tp-body">
+    <div class="tp-row">
+      <label>Lat, Lon (DD)</label>
+      <div class="tp-grid">
+        <input id="tp-lat" placeholder="-1.831" />
+        <input id="tp-lon" placeholder="-78.183" />
+      </div>
+    </div>
+
+    <div class="tp-row">
+      <label>DMS</label>
+      <div class="tp-grid tp-6">
+        <input id="tp-lat-d" placeholder="Deg" />
+        <input id="tp-lat-m" placeholder="Min" />
+        <input id="tp-lat-s" placeholder="Seg" />
+        <input id="tp-lon-d" placeholder="Deg" />
+        <input id="tp-lon-m" placeholder="Min" />
+        <input id="tp-lon-s" placeholder="Seg" />
+      </div>
+    </div>
+
+    <div class="tp-row">
+      <label>UTM</label>
+      <div class="tp-grid tp-4">
+        <input id="tp-utm-zone" placeholder="Zona" />
+        <select id="tp-utm-hem">
+          <option value="N">N</option>
+          <option value="S" selected>S</option>
+        </select>
+        <input id="tp-utm-e" placeholder="Este (E)" />
+        <input id="tp-utm-n" placeholder="Norte (N)" />
+      </div>
+    </div>
+
+    <div class="tp-row tp-hint">
+      <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra el mapa; “Fijar punto” deja marcador.</small>
+    </div>
+  </div>
+</div>
+
 
     <!-- FLOAT: Filters pill -->
     <div class="pill filters">
