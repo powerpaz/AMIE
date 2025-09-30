@@ -326,47 +326,112 @@ function attachTransformTools(){
 
     const toNum = (v)=>{ const n=parseFloat(String(v).replace(',', '.')); return Number.isFinite(n)?n:null; };
     const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-    function ddToDms(dd,isLat=true){ const sign=dd<0?-1:1; const abs=Math.abs(dd);
+
+    function ddToDms(dd,isLat=true){
+      const sign=dd<0?-1:1; const abs=Math.abs(dd);
       let deg=Math.floor(abs), minFloat=(abs-deg)*60, min=Math.floor(minFloat), sec=(minFloat-min)*60;
-      if(sec>=59.9999){sec=0;min+=1;} if(min>=60){min=0;deg+=1;} deg=sign<0?-deg:deg; if(isLat) deg=clamp(deg,-90,90); else deg=clamp(deg,-180,180);
-      return {d:deg,m:min,s:+sec.toFixed(5)};}
+      if(sec>=59.9999){sec=0;min+=1;} if(min>=60){min=0;deg+=1;}
+      deg=sign<0?-deg:deg; if(isLat) deg=clamp(deg,-90,90); else deg=clamp(deg,-180,180);
+      return {d:deg,m:min,s:+sec.toFixed(5)};
+    }
     function dmsToDd(d,m,s){ const sign=d<0?-1:1; const absD=Math.abs(d); const dd=absD+(Math.abs(m)/60)+(Math.abs(s)/3600); return +(sign*dd).toFixed(8); }
-    const lonToZone=(lon)=>Math.floor((lon+180)/6)+1;
+
     const utmProj=(zone,hem)=>`+proj=utm +zone=${zone} ${((hem||'S').toUpperCase()==='S')?'+south ':''}+datum=WGS84 +units=m +no_defs`;
-    function ddToUtm(lat,lon,zone=null,hem=null){ if(!Number.isFinite(lat)||!Number.isFinite(lon)) return null; const h=(lat<0?'S':'N'); const z=zone||lonToZone(lon);
-      const pr=utmProj(z,hem||h); const p=proj4('EPSG:4326',pr,[lon,lat]); return {zone:z,hem:(hem||h).toUpperCase(),e:+p[0].toFixed(3),n:+p[1].toFixed(3)}; }
-    function utmToDd(zone,hem,e,n){ const z=parseInt(zone,10); if(!z||!e||!n) return null; const pr=utmProj(z,hem); const p=proj4(pr,'EPSG:4326',[e,n]); return {lat:+p[1].toFixed(8),lon:+p[0].toFixed(8)}; }
+    function ddToUtm(lat,lon,zone,hem='S'){
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)) return null;
+      const pr=utmProj(zone,hem); const p=proj4('EPSG:4326',pr,[lon,lat]);
+      return {zone,hem:hem.toUpperCase(),e:+p[0].toFixed(2),n:+p[1].toFixed(2)};
+    }
+    function utmToDd(zone,hem,e,n){
+      const z=parseInt(zone,10); if(!z||!e||!n) return null;
+      const pr=utmProj(z,hem); const p=proj4(pr,'EPSG:4326',[e,n]);
+      return {lat:+p[1].toFixed(8),lon:+p[0].toFixed(8)};
+    }
 
     const $id=(x)=>document.getElementById(x);
-    const el={ lat:$id('tp-lat'), lon:$id('tp-lon'),
+    const el={
+      lat:$id('tp-lat'), lon:$id('tp-lon'),
       latD:$id('tp-lat-d'),latM:$id('tp-lat-m'),latS:$id('tp-lat-s'),
       lonD:$id('tp-lon-d'),lonM:$id('tp-lon-m'),lonS:$id('tp-lon-s'),
-      zone:$id('tp-utm-zone'),hem:$id('tp-utm-hem'),e:$id('tp-utm-e'),n:$id('tp-utm-n'),
-      btnGo:$id('tp-btn-center'),btnPin:$id('tp-btn-pin'),btnCopy:$id('tp-btn-copy') };
+      // 17S principal
+      e17:$id('tp-utm-e-17'), n17:$id('tp-utm-n-17'),
+      // 18S alterna
+      e18:$id('tp-utm-e-18'), n18:$id('tp-utm-n-18'),
+      btnGo:$id('tp-btn-center'),btnPin:$id('tp-btn-pin'),btnCopy:$id('tp-btn-copy')
+    };
 
     let tpMarker=null;
-    const setMarker=(lat,lon)=>{ if(!Number.isFinite(lat)||!Number.isFinite(lon)) return;
+    const setMarker=(lat,lon)=>{
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)) return;
       if(!tpMarker){ tpMarker=L.marker([lat,lon]).addTo(map);} else { tpMarker.setLatLng([lat,lon]); }
-      tpMarker.bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lon.toFixed(6)}`).openPopup(); };
+      tpMarker.bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lon.toFixed(6)}`).openPopup();
+    };
 
-    function fromDD(){ const lat=toNum(el.lat.value), lon=toNum(el.lon.value); if(!Number.isFinite(lat)||!Number.isFinite(lon)) return;
+    // DD -> UTM (17S y 18S) + DMS
+    function fromDD(){
+      const lat=toNum(el.lat.value), lon=toNum(el.lon.value);
+      if(!Number.isFinite(lat)||!Number.isFinite(lon)) return;
+
       const d1=ddToDms(lat,true), d2=ddToDms(lon,false);
       el.latD.value=d1.d; el.latM.value=d1.m; el.latS.value=d1.s;
       el.lonD.value=d2.d; el.lonM.value=d2.m; el.lonS.value=d2.s;
-      const u=ddToUtm(lat,lon,parseInt(el.zone.value,10)||null,el.hem.value); if(u){ el.zone.value=u.zone; el.hem.value=u.hem; el.e.value=u.e; el.n.value=u.n; } }
-    function fromDMS(){ const lat=dmsToDd(toNum(el.latD.value)||0,toNum(el.latM.value)||0,toNum(el.latS.value)||0);
-      const lon=dmsToDd(toNum(el.lonD.value)||0,toNum(el.lonM.value)||0,toNum(el.lonS.value)||0);
-      el.lat.value=lat; el.lon.value=lon; fromDD(); }
-    function fromUTM(){ const zone=parseInt(el.zone.value,10), hem=(el.hem.value||'S').toUpperCase(); const e=toNum(el.e.value), n=toNum(el.n.value);
-      if(!zone||!e||!n) return; const dd=utmToDd(zone,hem,e,n); if(!dd) return; el.lat.value=dd.lat; el.lon.value=dd.lon; fromDD(); }
 
-    [el.lat,el.lon].forEach(i=>{ i.addEventListener('change',fromDD); i.addEventListener('keyup',e=>{ if(e.key==='Enter') fromDD(); }); });
-    [el.latD,el.latM,el.latS,el.lonD,el.lonM,el.lonS].forEach(i=>{ i.addEventListener('change',fromDMS); i.addEventListener('keyup',e=>{ if(e.key==='Enter') fromDMS(); }); });
-    [el.zone,el.hem,el.e,el.n].forEach(i=>{ i.addEventListener('change',fromUTM); i.addEventListener('keyup',e=>{ if(e.key==='Enter') fromUTM(); }); });
+      const u17=ddToUtm(lat,lon,17,'S'); if(u17){ el.e17.value=u17.e; el.n17.value=u17.n; }
+      const u18=ddToUtm(lat,lon,18,'S'); if(u18){ el.e18.value=u18.e; el.n18.value=u18.n; }
+    }
+
+    // UTM 17S -> DD
+    function fromUTM17(){
+      const e=toNum(el.e17.value), n=toNum(el.n17.value);
+      if(!e||!n) return;
+      const dd=utmToDd(17,'S',e,n);
+      if(!dd) return;
+      el.lat.value=dd.lat; el.lon.value=dd.lon; fromDD();
+    }
+
+    // UTM 18S -> DD
+    function fromUTM18(){
+      const e=toNum(el.e18.value), n=toNum(el.n18.value);
+      if(!e||!n) return;
+      const dd=utmToDd(18,'S',e,n);
+      if(!dd) return;
+      el.lat.value=dd.lat; el.lon.value=dd.lon; fromDD();
+    }
+
+    // Eventos
+    [el.lat,el.lon].forEach(i=>{
+      i.addEventListener('change',fromDD);
+      i.addEventListener('keyup',e=>{ if(e.key==='Enter') fromDD(); });
+    });
+    [el.latD,el.latM,el.latS,el.lonD,el.lonM,el.lonS].forEach(i=>{
+      i.addEventListener('change',()=>{
+        const lat=dmsToDd(toNum(el.latD.value)||0,toNum(el.latM.value)||0,toNum(el.latS.value)||0);
+        const lon=dmsToDd(toNum(el.lonD.value)||0,toNum(el.lonM.value)||0,toNum(el.lonS.value)||0);
+        el.lat.value=lat; el.lon.value=lon; fromDD();
+      });
+      i.addEventListener('keyup',e=>{ if(e.key==='Enter') {
+        const lat=dmsToDd(toNum(el.latD.value)||0,toNum(el.latM.value)||0,toNum(el.latS.value)||0);
+        const lon=dmsToDd(toNum(el.lonD.value)||0,toNum(el.lonM.value)||0,toNum(el.lonS.value)||0);
+        el.lat.value=lat; el.lon.value=lon; fromDD();
+      }});
+    });
+
+    // UTM → DD en ambas filas
+    [el.e17, el.n17].forEach(i=>{
+      i.addEventListener('change',fromUTM17);
+      i.addEventListener('keyup',e=>{ if(e.key==='Enter') fromUTM17(); });
+    });
+    [el.e18, el.n18].forEach(i=>{
+      i.addEventListener('change',fromUTM18);
+      i.addEventListener('keyup',e=>{ if(e.key==='Enter') fromUTM18(); });
+    });
 
     el.btnGo.addEventListener('click', ()=>{ const lat=toNum(el.lat.value), lon=toNum(el.lon.value); if(Number.isFinite(lat)&&Number.isFinite(lon)) map.setView([lat,lon],15); });
     el.btnPin.addEventListener('click', ()=>{ const lat=toNum(el.lat.value), lon=toNum(el.lon.value); if(Number.isFinite(lat)&&Number.isFinite(lon)) setMarker(lat,lon); });
-    el.btnCopy.addEventListener('click', async ()=>{ const txt=`Lat: ${el.lat.value}, Lon: ${el.lon.value} | DMS: ${el.latD.value}°${el.latM.value}'${el.latS.value}" , ${el.lonD.value}°${el.lonM.value}'${el.lonS.value}" | UTM: ${el.zone.value}${el.hem.value} E=${el.e.value} N=${el.n.value}`; try{ await navigator.clipboard.writeText(txt);}catch{} });
+    el.btnCopy.addEventListener('click', async ()=>{
+      const txt=`DD: ${el.lat.value}, ${el.lon.value} | 17S: E=${el.e17.value} N=${el.n17.value} | 18S: E=${el.e18.value} N=${el.n18.value}`;
+      try{ await navigator.clipboard.writeText(txt);}catch{}
+    });
 
     map.on('click',(e)=>{ el.lat.value=+e.latlng.lat.toFixed(8); el.lon.value=+e.latlng.lng.toFixed(8); fromDD(); });
 
