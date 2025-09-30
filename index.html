@@ -101,49 +101,69 @@
     </div>
 
     <!-- Panel Transformación -->
-    <div class="transform-panel" id="transform-panel">
-      <div class="tp-head">
-        <strong>Transformación</strong>
-        <div class="tp-actions">
-          <button class="btn sm ghost" id="tp-btn-center">Ir</button>
-          <button class="btn sm ghost" id="tp-btn-pin">Fijar punto</button>
-          <button class="btn sm ghost" id="tp-btn-copy">Copiar</button>
-        </div>
-      </div>
-      <div class="tp-body">
-        <div class="tp-row">
-          <label>Lat, Lon (DD)</label>
-          <div class="tp-grid tp-2">
-            <input id="tp-lat" placeholder="-1.831" />
-            <input id="tp-lon" placeholder="-78.183" />
-          </div>
-        </div>
-        <div class="tp-row">
-          <label>DMS</label>
-          <div class="tp-grid tp-6">
-            <input id="tp-lat-d" placeholder="Lat °" />
-            <input id="tp-lat-m" placeholder="Lat ′" />
-            <input id="tp-lat-s" placeholder="Lat ″" />
-            <input id="tp-lon-d" placeholder="Lon °" />
-            <input id="tp-lon-m" placeholder="Lon ′" />
-            <input id="tp-lon-s" placeholder="Lon ″" />
-          </div>
-        </div>
-        <div class="tp-row">
-          <label>UTM</label>
-          <div class="tp-grid tp-utm">
-            <input id="tp-utm-zone" placeholder="Zona" />
-            <select id="tp-utm-hem"><option value="N">N</option><option value="S" selected>S</option></select>
-            <input id="tp-utm-e" placeholder="Este (E)" />
-            <input id="tp-utm-n" placeholder="Norte (N)" />
-          </div>
-        </div>
-        <div class="tp-row tp-hint">
-          <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra; “Fijar punto” deja marcador.</small>
-        </div>
-      </div>
+<div class="transform-panel" id="transform-panel">
+  <div class="tp-head">
+    <strong>Transformación</strong>
+    <div class="tp-actions">
+      <button class="btn sm ghost" id="tp-btn-center">Ir</button>
+      <button class="btn sm ghost" id="tp-btn-pin">Fijar punto</button>
+      <button class="btn sm ghost" id="tp-btn-copy">Copiar</button>
     </div>
   </div>
+  <div class="tp-body">
+    <div class="tp-row">
+      <label>Lat, Lon (DD)</label>
+      <div class="tp-grid tp-2">
+        <input id="tp-lat" placeholder="-1.831" />
+        <input id="tp-lon" placeholder="-78.183" />
+      </div>
+    </div>
+
+    <div class="tp-row">
+      <label>DMS</label>
+      <div class="tp-grid tp-6">
+        <input id="tp-lat-d" placeholder="Lat °" />
+        <input id="tp-lat-m" placeholder="Lat ′" />
+        <input id="tp-lat-s" placeholder="Lat ″" />
+        <input id="tp-lon-d" placeholder="Lon °" />
+        <input id="tp-lon-m" placeholder="Lon ′" />
+        <input id="tp-lon-s" placeholder="Lon ″" />
+      </div>
+    </div>
+
+    <!-- 17S PRINCIPAL (bloque fijo a 17S) -->
+    <div class="tp-row">
+      <label>UTM (17S — principal)</label>
+      <div class="tp-grid tp-utm">
+        <input id="tp-utm-zone-17" value="17" disabled />
+        <select id="tp-utm-hem-17" disabled>
+          <option value="S" selected>S</option>
+          <option value="N">N</option>
+        </select>
+        <input id="tp-utm-e-17" placeholder="Este (E) 17S" />
+        <input id="tp-utm-n-17" placeholder="Norte (N) 17S" />
+      </div>
+    </div>
+
+    <!-- 18S ALTERNA (bloque fijo a 18S) -->
+    <div class="tp-row">
+      <label>UTM (18S — alterna)</label>
+      <div class="tp-grid tp-utm">
+        <input id="tp-utm-zone-18" value="18" disabled />
+        <select id="tp-utm-hem-18" disabled>
+          <option value="S" selected>S</option>
+          <option value="N">N</option>
+        </select>
+        <input id="tp-utm-e-18" placeholder="Este (E) 18S" />
+        <input id="tp-utm-n-18" placeholder="Norte (N) 18S" />
+      </div>
+    </div>
+
+    <div class="tp-row tp-hint">
+      <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra; “Fijar punto” deja marcador.</small>
+    </div>
+  </div>
+</div>
 
   <!-- App -->
   <script src="app.js?v=4"></script>
