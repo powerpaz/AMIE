@@ -1,439 +1,79 @@
-// ==========================
-//  AMIE Geoportal — app.js
-//  Basemaps (OSM/Satélite/Dark) + Provincias GeoJSON
-//  Supabase v2 + autodetección columnas + carga en lotes
-//  Filtros desde memoria + Panel Transformación (DD/DMS/UTM)
-// ==========================
-const TABLE = 'instituciones';
-
-let supa = null;
-let map, clusterLayer, markers = [];
-let provinceLayer = null;
-
-let dataCache = [];   // datos visibles (tabla + mapa)
-let allCache  = [];   // universo completo para combos
-let selection = new Set();
-
-let pageNow = 1, pageSize = 25, pageTotal = 1;
-
-// ---------- util ----------
-const $ = (s)=>document.querySelector(s);
-const $$=(s)=>Array.from(document.querySelectorAll(s));
-const fmt=(v)=> (v ?? '');
-const uniq=(a)=>[...new Set(a.filter(x => (x ?? '').toString().trim()!==''))]
-  .sort((A,B)=>`${A}`.localeCompare(`${B}`,'es'));
-const setStatus=(m)=>$('#status').textContent=m;
-const setSelCount=()=>$('#selCount').textContent=selection.size;
-
-// ---------- autodetección columnas ----------
-const CANDIDATES={
-  AMIE:['AMIE','amie'],
-  Nombre:['Nombre','nombre'],
-  Tipo:['Tipo','tipo'],
-  Sostenimiento:['Sostenimiento','sostenimiento'],
-  Provincia:['Provincia','provincia'],
-  Canton:['Canton','canton','cantón'],
-  Parroquia:['Parroquia','parroquia'],
-  lat:['lat','Lat','latitude','LAT'],
-  lon:['lon','Lon','longitude','LON']
-};
-const COL={};
-const firstKey=(obj, list)=>{for(const k of list) if(k in obj) return k; return list[0];}
-function detectColumns(sample){ for(const L in CANDIDATES){ COL[L]=firstKey(sample,CANDIDATES[L]); } console.log('🧭 Column map:',COL); }
-const v=(obj,L)=> obj?.[COL[L] ?? CANDIDATES[L][0]];
-
-// ---------- supabase ----------
-function getSupabase(){
-  if(!supa && window.env?.SUPABASE_URL && window.env?.SUPABASE_KEY && window.supabase){
-    supa = window.supabase.createClient(window.env.SUPABASE_URL, window.env.SUPABASE_KEY);
-    console.log('✅ Supabase listo');
-  }
-  return supa;
+:root{
+  --bg:#0f1318; --bg-soft:#151b23; --panel:#111821; --card:#141d27;
+  --surface:#f7fafc; --text:#f2f6fc; --text-muted:#b9c4d1; --ink:#1f2937;
+  --primary:#3b82f6; --primary-2:#2563eb; --accent:#22d3ee; --danger:#ff6b6b; --ok:#34d399;
+  --border:rgba(255,255,255,.15); --shadow: 0 10px 28px rgba(0,0,0,.35); --radius:16px;
 }
-async function ensureColumnsDetected(){
-  if(Object.keys(COL).length>0) return;
-  const c=getSupabase();
-  const probe=await c.from(TABLE).select('*').limit(1);
-  if(probe.error) throw probe.error;
-  if(probe.data?.length) detectColumns(probe.data[0]);
-  else throw new Error('Tabla vacía o sin acceso (RLS).');
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial}
+
+/* Top nav */
+.nav{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:rgba(255,255,255,.06);border-bottom:1px solid var(--border);backdrop-filter:blur(8px)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600}
+.brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.searchbar{display:flex;gap:8px;align-items:center}
+.searchbar input{width:220px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0f1620;color:var(--text);outline:none}
+.btn{border:none;padding:10px 14px;border-radius:12px;cursor:pointer;color:#fff}
+.btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-2))}
+.btn.ghost{background:transparent;border:1px solid var(--border);color:#e6eefb}
+.btn.sm{padding:6px 10px;border-radius:10px;background:#112031}
+
+/* Stage & Map */
+.stage{position:relative;height:calc(100vh - 58px);width:100%}
+#map{position:absolute;inset:12px 12px 86px 12px;border-radius:18px;border:1px solid rgba(255,255,255,.18);box-shadow:var(--shadow);overflow:hidden}
+
+/* Filtros */
+.pill.filters{position:absolute;top:24px;left:28px;right:28px;display:flex;flex-wrap:wrap;gap:8px 10px;background:rgba(255,255,255,.10);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:var(--shadow);z-index:9999}
+.pill.filters select{flex:1 1 160px;max-width:240px;padding:8px 10px;background:#111a25;border:1px solid rgba(255,255,255,.18);border-radius:10px;color:#e8f1ff}
+
+/* KPIs */
+.kpis{position:absolute;top:24px;right:28px;display:flex;gap:12px;z-index:500}
+.card{background:linear-gradient(180deg,#122032,#0e1723);border:1px solid var(--border);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);min-width:150px}
+.card .k{color:var(--text-muted);font-size:12px}.card .v{font-size:20px;font-weight:700;letter-spacing:.2px}
+
+/* Panel Listado */
+.panel{position:absolute;top:110px;right:28px;bottom:98px;width:420px;z-index:520;background:rgba(15,22,32,.95);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.panel-head,.panel-foot{padding:10px 12px;background:#0f1a28;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-foot{border-top:1px solid var(--border);border-bottom:none;margin-top:auto}
+.pager{display:flex;align-items:center;gap:8px}
+.pager .sm{padding:6px 10px;border-radius:10px}
+.table-wrap{overflow:auto;height:100%;background:#0e1723}
+#grid{width:100%;border-collapse:collapse;font-size:13px}
+#grid thead{position:sticky;top:0;background:#132237}
+#grid th,#grid td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.08)}
+#grid tbody tr:hover{background:rgba(59,130,246,.12)}
+
+/* HUD inferior */
+.hud{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:10px;z-index:540}
+.chip{background:var(--surface);color:var(--ink);border:1px solid rgba(0,0,0,.08);padding:9px 12px;border-radius:14px;box-shadow:0 8px 18px rgba(0,0,0,.2)}
+
+/* Transform Panel */
+.transform-panel{position:absolute;left:28px;bottom:112px;width:520px;background:rgba(15,22,32,.96);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);z-index:540;color:#e8f1ff;backdrop-filter:blur(6px)}
+.tp-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#0f1a28;border-bottom:1px solid var(--border)}
+.tp-actions{display:flex;gap:6px}
+.tp-body{padding:10px 12px}
+.tp-row{margin-bottom:10px}
+.tp-row label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.tp-grid{display:grid;gap:8px}
+.tp-grid.tp-2{grid-template-columns:1fr 1fr}
+.tp-grid.tp-6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.tp-grid.tp-utm{grid-template-columns:90px 70px 1fr 1fr}
+.transform-panel input,.transform-panel select{background:#111a25;border:1px solid rgba(255,255,255,.18);color:#e8f1ff;border-radius:10px;padding:8px 10px;outline:none;min-width:0}
+.tp-hint small{color:#b9c4d1}
+
+/* Leaflet placements */
+.leaflet-top.leaflet-left{top:88px!important}
+.leaflet-control-layers,.leaflet-control-zoom{z-index:5000}
+.leaflet-bottom.leaflet-left{left:22px!important;bottom:22px!important}
+
+/* Responsive */
+@media (max-width:1100px){
+  .panel{width:92vw;right:4vw;top:auto;height:46vh}
+  .kpis{left:28px;right:auto;top:auto;bottom:112px}
+  .pill.filters{top:16px;left:16px;right:16px;padding:8px;gap:6px 8px}
+  .pill.filters select{flex:1 1 140px;max-width:200px}
+  #map{inset:12px 12px 170px 12px}
+  .transform-panel{left:16px;right:16px;width:auto;bottom:176px}
+  .tp-grid.tp-6{grid-template-columns:repeat(3,1fr)}
+  .tp-grid.tp-utm{grid-template-columns:1fr 1fr}
 }
-
-// ---------- datos ----------
-async function fetchAllFromSupabase(filters={}, chunk=1000, cap=20000){
-  const c=getSupabase(); if(!c) throw new Error('Supabase no configurado');
-  await ensureColumnsDetected();
-
-  const build=()=>{ let q=c.from(TABLE).select('*',{count:'exact'});
-    if(filters.provincia)     q=q.eq(COL.Provincia,filters.provincia);
-    if(filters.canton)        q=q.eq(COL.Canton,filters.canton);
-    if(filters.parroquia)     q=q.eq(COL.Parroquia,filters.parroquia);
-    if(filters.tipo)          q=q.eq(COL.Tipo,filters.tipo);
-    if(filters.sostenimiento) q=q.eq(COL.Sostenimiento,filters.sostenimiento);
-    if(filters.qAmie)         q=q.ilike(COL.AMIE,`%${filters.qAmie}%`);
-    if(filters.qNombre)       q=q.ilike(COL.Nombre,`%${filters.qNombre}%`);
-    return q;
-  };
-
-  let all=[], from=0, to=chunk-1, total=null;
-  while(all.length<cap){
-    const {data,error,count}=await build().range(from,to);
-    if(error) throw error;
-    if(total===null) total=count??0;
-    const batch=(data??[]).map(r=>({
-      AMIE:v(r,'AMIE'), Nombre:v(r,'Nombre'),
-      Tipo:v(r,'Tipo'), Sostenimiento:v(r,'Sostenimiento'),
-      Provincia:v(r,'Provincia'), Canton:v(r,'Canton'), Parroquia:v(r,'Parroquia'),
-      lat:parseFloat(v(r,'lat')), lon:parseFloat(v(r,'lon'))
-    })).filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon));
-    all.push(...batch);
-    if(!data || data.length<chunk) break;
-    from+=chunk; to+=chunk;
-  }
-  return {rows:all, total: total ?? all.length};
-}
-
-function loadFromCSV(path){
-  return new Promise((resolve,reject)=>{
-    Papa.parse(path,{header:true,download:true,
-      complete:(res)=>{
-        const first=res.data?.[0]||{};
-        if(Object.keys(COL).length===0 && Object.keys(first).length) detectColumns(first);
-        const rows=res.data.map(r=>({
-          AMIE:r[COL.AMIE]??r.AMIE, Nombre:r[COL.Nombre]??r.Nombre,
-          Tipo:r[COL.Tipo]??r.Tipo, Sostenimiento:r[COL.Sostenimiento]??r.Sostenimiento,
-          Provincia:r[COL.Provincia]??r.Provincia, Canton:r[COL.Canton]??r.Canton,
-          Parroquia:r[COL.Parroquia]??r.Parroquia,
-          lat:parseFloat(r[COL.lat]??r.lat), lon:parseFloat(r[COL.lon]??r.lon)
-        })).filter(r=>Number.isFinite(r.lat)&&Number.isFinite(r.lon));
-        resolve({rows,total:rows.length});
-      }, error:reject
-    });
-  });
-}
-
-// ---------- filtros desde memoria ----------
-function fillFiltersFromRows(rows){
-  const provs = uniq(rows.map(r=>r.Provincia));
-  const soss  = uniq(rows.map(r=>r.Sostenimiento));
-  const tipos = uniq(rows.map(r=>r.Tipo));
-
-  putOptions($('#f-provincia'), ['Provincia', ...provs]);
-  putOptions($('#f-sosten'),   ['Sostenimiento', ...soss]);
-  putOptions($('#f-tipo'),     ['Tipo', ...tipos]);
-
-  putOptions($('#f-canton'),   ['Cantón']);
-  putOptions($('#f-parroquia'),['Parroquia']);
-  $('#f-canton').disabled = true;
-  $('#f-parroquia').disabled = true;
-}
-
-async function updateCantones(provincia) {
-  $('#f-canton').disabled = !provincia;
-  $('#f-parroquia').disabled = true;
-  putOptions($('#f-canton'), ['Cantón']);
-  putOptions($('#f-parroquia'), ['Parroquia']);
-  if (!provincia) return;
-
-  const cantones = uniq(allCache.filter(r => r.Provincia === provincia).map(r => r.Canton));
-  putOptions($('#f-canton'), ['Cantón', ...cantones]);
-}
-
-async function updateParroquias(provincia, canton) {
-  $('#f-parroquia').disabled = !(provincia && canton);
-  putOptions($('#f-parroquia'), ['Parroquia']);
-  if (!(provincia && canton)) return;
-
-  const parroqs = uniq(allCache
-    .filter(r => r.Provincia === provincia && r.Canton === canton)
-    .map(r => r.Parroquia));
-  putOptions($('#f-parroquia'), ['Parroquia', ...parroqs]);
-}
-
-function putOptions(select, values){
-  select.innerHTML='';
-  values.forEach(v=>{
-    const opt=document.createElement('option');
-    opt.value=(['Provincia','Cantón','Parroquia','Tipo','Sostenimiento'].includes(v)?'':v);
-    opt.textContent=v; select.appendChild(opt);
-  });
-}
-
-// ---------- provincias ----------
-async function loadProvincias(){
-  try{
-    const res=await fetch('provincias.json');
-    const gj=await res.json();
-    if(provinceLayer){ map.removeLayer(provinceLayer); }
-    provinceLayer=L.geoJSON(gj,{
-      style:{color:'#3b82f6',weight:1.2,fillColor:'#60a5fa',fillOpacity:0.12}
-    }).addTo(map);
-  }catch(e){ console.warn('No se pudo cargar provincias.json',e); }
-}
-function highlightProvincia(nombre){
-  if(!provinceLayer){return;}
-  if(!nombre){ provinceLayer.setStyle({fillOpacity:0.12}); return; }
-  provinceLayer.setStyle(f=>({
-    color:'#3b82f6', weight:1.2, fillColor:'#60a5fa',
-    fillOpacity: (f.properties?.DPA_DESPRO===nombre ? 0.28 : 0.06)
-  }));
-}
-
-// ---------- mapa + capas base ----------
-let baseLayersRef = {};
-function initMap(){
-  map=L.map('map',{preferCanvas:true, zoomControl:false}).setView([-1.45,-78.2],6);
-
-  // Base layers
-  const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    attribution:'&copy; OpenStreetMap contributors'
-  });
-  const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-    attribution:'Tiles &copy; Esri'
-  });
-  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    attribution:'&copy; OpenStreetMap, &copy; CARTO'
-  });
-
-  osm.addTo(map); // default
-  baseLayersRef = { 'OpenStreetMap': osm, 'Satélite (Esri)': esriSat, 'Dark (Carto)': cartoDark };
-  L.control.layers(baseLayersRef, null, { position:'topleft', collapsed:true }).addTo(map);
-  L.control.zoom({ position:'topleft' }).addTo(map);
-  L.control.scale({ imperial:false }).addTo(map);
-
-  clusterLayer=L.markerClusterGroup({chunkedLoading:true, spiderfyOnMaxZoom:true});
-  map.addLayer(clusterLayer);
-
-  map.on('mousemove', (e)=> $('#cursor').textContent = `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`);
-
-  loadProvincias();
-}
-
-// marker
-const blueIcon=new L.Icon({
-  iconUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconSize:[25,41], iconAnchor:[12,41], popupAnchor:[1,-34],
-  shadowUrl:'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png'
-});
-
-// pintar todo
-function drawAll(rows, fit=false){
-  clusterLayer.clearLayers(); markers=[];
-  rows.forEach(r=>{
-    const m=L.marker([r.lat,r.lon],{icon:blueIcon,title:`${r.AMIE} — ${r.Nombre}`});
-    m.bindPopup(`<b>${fmt(r.Nombre)}</b><br>AMIE: ${fmt(r.AMIE)}<br>${fmt(r.Tipo)} — ${fmt(r.Sostenimiento)}<br>${fmt(r.Parroquia)}, ${fmt(r.Canton)}, ${fmt(r.Provincia)}`);
-    m.on('click',()=>{ selection.add(r.AMIE); setSelCount(); highlightRow(r.AMIE); });
-    clusterLayer.addLayer(m); markers.push({m,r});
-  });
-  if(fit && rows.length){ const b=L.latLngBounds(rows.map(r=>[r.lat,r.lon])); map.fitBounds(b.pad(0.1)); }
-  pageNow=1; pageSize=parseInt($('#pg-size').value,10)||25; renderTable(rows);
-}
-
-function renderTable(rows){
-  pageTotal=Math.max(1,Math.ceil(rows.length/pageSize));
-  $('#pg-now').textContent=pageNow; $('#pg-total').textContent=pageTotal;
-  const start=(pageNow-1)*pageSize, end=start+pageSize, pageRows=rows.slice(start,end);
-  const tbody=$('#grid tbody'); tbody.innerHTML='';
-  pageRows.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${fmt(r.AMIE)}</td><td>${fmt(r.Nombre)}</td><td>${fmt(r.Tipo)}</td><td>${fmt(r.Sostenimiento)}</td><td>${fmt(r.Provincia)}</td><td>${fmt(r.Canton)}</td><td>${fmt(r.Parroquia)}</td>`;
-    tr.addEventListener('click',()=>{ selection.add(r.AMIE); setSelCount(); flyTo(r); });
-    tbody.appendChild(tr);
-  });
-}
-
-function flyTo(r){ map.setView([r.lat,r.lon],14); const mk=markers.find(x=>x.r.AMIE===r.AMIE); if(mk) mk.m.openPopup(); highlightRow(r.AMIE); }
-function highlightRow(amie){ $$('#grid tbody tr').forEach(tr=>{ const v=tr.children[0]?.textContent; tr.style.background=(v===amie)?'rgba(59,130,246,.18)':''; }); }
-
-function updateKPIs(rows){
-  $('#kpi-total').textContent=rows.length;
-  $('#kpi-provincias').textContent=uniq(rows.map(r=>r.Provincia)).length;
-  $('#kpi-tipos').textContent=uniq(rows.map(r=>r.Tipo)).length;
-}
-
-// ---------- carga inicial ----------
-async function loadDataInitial(){
-  setStatus('Cargando datos...');
-  try{
-    const {rows,total}=await fetchAllFromSupabase({},1000,20000);
-    allCache  = rows.slice();
-    dataCache = rows.slice();
-    updateKPIs(rows); drawAll(rows,true);
-    fillFiltersFromRows(allCache);
-    setStatus(`Listo. Registros: ${total}`);
-  }catch(e){
-    console.warn('⚠️ Supabase falló, CSV local:',e.message);
-    const {rows,total}=await loadFromCSV('data/instituciones_geo_fixed.csv');
-    allCache  = rows.slice();
-    dataCache = rows.slice();
-    updateKPIs(rows); drawAll(rows,true);
-    fillFiltersFromRows(allCache);
-    setStatus(`Modo CSV local. Registros: ${total}`);
-  }
-}
-
-// ---------- eventos ----------
-$('#btn-limpiar').addEventListener('click', async ()=>{
-  $('#f-provincia').value=''; $('#f-canton').value=''; $('#f-parroquia').value='';
-  $('#f-sosten').value=''; $('#f-tipo').value='';
-  $('#q-amie').value=''; $('#q-nombre').value='';
-  $('#f-canton').disabled=true; $('#f-parroquia').disabled=true;
-  highlightProvincia('');
-  fillFiltersFromRows(allCache);
-  await doQueryAndDraw();
-});
-
-$('#f-provincia').addEventListener('change', async (e)=>{
-  const prov=e.target.value||'';
-  await updateCantones(prov);
-  await doQueryAndDraw();
-  highlightProvincia(prov);
-});
-
-$('#f-canton').addEventListener('change', async (e)=>{
-  await updateParroquias($('#f-provincia').value||'', e.target.value||'');
-  await doQueryAndDraw();
-});
-$('#f-parroquia').addEventListener('change', doQueryAndDraw);
-$('#f-sosten').addEventListener('change', doQueryAndDraw);
-$('#f-tipo').addEventListener('change', doQueryAndDraw);
-
-$('#btn-buscar').addEventListener('click', doQueryAndDraw);
-$('#q-amie').addEventListener('keyup', (e)=>{ if(e.key==='Enter') doQueryAndDraw(); });
-$('#q-nombre').addEventListener('keyup', (e)=>{ if(e.key==='Enter') doQueryAndDraw(); });
-
-$('#pg-prev').addEventListener('click', ()=>{ if(pageNow>1){ pageNow--; renderTable(dataCache);} });
-$('#pg-next').addEventListener('click', ()=>{ if(pageNow<pageTotal){ pageNow++; renderTable(dataCache);} });
-$('#pg-size').addEventListener('change', ()=>{ pageSize=parseInt($('#pg-size').value,10)||25; pageNow=1; renderTable(dataCache); });
-$('#btn-clear-selection').addEventListener('click', ()=>{ selection.clear(); setSelCount(); });
-
-// ---------- consulta ----------
-async function doQueryAndDraw(){
-  const filters={
-    provincia:$('#f-provincia').value||'',
-    canton:$('#f-canton').value||'',
-    parroquia:$('#f-parroquia').value||'',
-    tipo:$('#f-tipo').value||'',
-    sostenimiento:$('#f-sosten').value||'',
-    qAmie:($('#q-amie')?.value||'').trim(),
-    qNombre:($('#q-nombre')?.value||'').trim()
-  };
-  setStatus('Consultando...');
-  try{
-    const {rows,total}=await fetchAllFromSupabase(filters,1000,20000);
-    dataCache=rows; drawAll(rows,true); setStatus(`Consulta OK (${total})`);
-  }catch(e){
-    setStatus('Error en Supabase (revisa RLS/tabla).'); console.error(e);
-  }
-}
-
-// ---------- Panel Transformación (DD/DMS/UTM) ----------
-(function attachTransformTools(){
-  // helpers
-  const toNum = (v)=> {
-    const n = parseFloat(String(v).replace(',', '.'));
-    return Number.isFinite(n) ? n : null;
-  };
-  const clamp = (v,min,max)=> Math.max(min, Math.min(max, v));
-
-  function ddToDms(dd, isLat=true){
-    const sign = dd < 0 ? -1 : 1;
-    const abs = Math.abs(dd);
-    let deg = Math.floor(abs);
-    let minFloat = (abs - deg) * 60;
-    let min = Math.floor(minFloat);
-    let sec = (minFloat - min) * 60;
-    if (sec >= 59.9999) { sec = 0; min += 1; }
-    if (min >= 60) { min = 0; deg += 1; }
-    deg = sign < 0 ? -deg : deg;
-    if (isLat) deg = clamp(deg, -90, 90);
-    else       deg = clamp(deg, -180, 180);
-    return { d: deg, m: min, s: +sec.toFixed(5) };
-  }
-  function dmsToDd(d, m, s){
-    const sign = d < 0 ? -1 : 1;
-    const absD = Math.abs(d);
-    const dd = absD + (Math.abs(m)/60) + (Math.abs(s)/3600);
-    return +(sign * dd).toFixed(8);
-  }
-  function lonToZone(lon){ return Math.floor((lon + 180) / 6) + 1; }
-  function utmProj(zone, hem){ const south = (hem || 'S').toUpperCase() === 'S'; return `+proj=utm +zone=${zone} ${south?'+south ':''}+datum=WGS84 +units=m +no_defs`; }
-  function ddToUtm(lat, lon, explicitZone=null, hemExplicit=null){
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-    const hem = (lat < 0 ? 'S' : 'N');
-    const zone = explicitZone || lonToZone(lon);
-    const proj = utmProj(zone, hemExplicit || hem);
-    const p = proj4('EPSG:4326', proj, [lon, lat]);
-    return { zone, hem: (hemExplicit || hem).toUpperCase(), e: +p[0].toFixed(3), n: +p[1].toFixed(3) };
-  }
-  function utmToDd(zone, hem, e, n){
-    const z = parseInt(zone,10);
-    if (!z || !e || !n) return null;
-    const proj = utmProj(z, hem);
-    const p = proj4(proj, 'EPSG:4326', [e, n]);
-    return { lat: +p[1].toFixed(8), lon: +p[0].toFixed(8) };
-  }
-
-  const $id = (x)=> document.getElementById(x);
-  const el = {
-    lat: $id('tp-lat'), lon: $id('tp-lon'),
-    latD: $id('tp-lat-d'), latM: $id('tp-lat-m'), latS: $id('tp-lat-s'),
-    lonD: $id('tp-lon-d'), lonM: $id('tp-lon-m'), lonS: $id('tp-lon-s'),
-    zone: $id('tp-utm-zone'), hem:  $id('tp-utm-hem'),
-    e: $id('tp-utm-e'), n: $id('tp-utm-n'),
-    btnGo: $id('tp-btn-center'), btnPin: $id('tp-btn-pin'), btnCopy: $id('tp-btn-copy'),
-  };
-
-  let tpMarker = null;
-  function setMarker(lat, lon){
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-    if (!tpMarker){ tpMarker = L.marker([lat, lon]).addTo(map); }
-    else { tpMarker.setLatLng([lat, lon]); }
-    tpMarker.bindPopup(`Lat: ${lat.toFixed(6)}<br>Lon: ${lon.toFixed(6)}`).openPopup();
-  }
-
-  function fromDD(){
-    const lat = toNum(el.lat.value), lon = toNum(el.lon.value);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-    const d1 = ddToDms(lat, true), d2 = ddToDms(lon, false);
-    el.latD.value = d1.d; el.latM.value = d1.m; el.latS.value = d1.s;
-    el.lonD.value = d2.d; el.lonM.value = d2.m; el.lonS.value = d2.s;
-    const u = ddToUtm(lat, lon, parseInt(el.zone.value,10)||null, el.hem.value);
-    if (u){ el.zone.value=u.zone; el.hem.value=u.hem; el.e.value=u.e; el.n.value=u.n; }
-  }
-  function fromDMS(){
-    const lat = dmsToDd(toNum(el.latD.value)||0, toNum(el.latM.value)||0, toNum(el.latS.value)||0);
-    const lon = dmsToDd(toNum(el.lonD.value)||0, toNum(el.lonM.value)||0, toNum(el.lonS.value)||0);
-    el.lat.value = lat; el.lon.value = lon; fromDD();
-  }
-  function fromUTM(){
-    const zone = parseInt(el.zone.value,10), hem=(el.hem.value||'S').toUpperCase();
-    const e = toNum(el.e.value), n = toNum(el.n.value);
-    if (!zone || !e || !n) return;
-    const dd = utmToDd(zone, hem, e, n);
-    if (!dd) return; el.lat.value = dd.lat; el.lon.value = dd.lon; fromDD();
-  }
-
-  [el.lat, el.lon].forEach(i => { i.addEventListener('change', fromDD); i.addEventListener('keyup', e=>{ if(e.key==='Enter') fromDD(); }); });
-  [el.latD, el.latM, el.latS, el.lonD, el.lonM, el.lonS].forEach(i => { i.addEventListener('change', fromDMS); i.addEventListener('keyup', e=>{ if(e.key==='Enter') fromDMS(); }); });
-  [el.zone, el.hem, el.e, el.n].forEach(i => { i.addEventListener('change', fromUTM); i.addEventListener('keyup', e=>{ if(e.key==='Enter') fromUTM(); }); });
-
-  el.btnGo.addEventListener('click', ()=>{ const lat=toNum(el.lat.value), lon=toNum(el.lon.value); if(Number.isFinite(lat)&&Number.isFinite(lon)) map.setView([lat,lon],15); });
-  el.btnPin.addEventListener('click', ()=>{ const lat=toNum(el.lat.value), lon=toNum(el.lon.value); if(Number.isFinite(lat)&&Number.isFinite(lon)) setMarker(lat,lon); });
-  el.btnCopy.addEventListener('click', async ()=>{
-    const txt = `Lat: ${el.lat.value}, Lon: ${el.lon.value} | DMS: ${el.latD.value}°${el.latM.value}'${el.latS.value}" , ${el.lonD.value}°${el.lonM.value}'${el.lonS.value}" | UTM: ${el.zone.value}${el.hem.value} E=${el.e.value} N=${el.n.value}`;
-    try { await navigator.clipboard.writeText(txt); } catch {}
-  });
-
-  map.on('click', (e)=>{ el.lat.value=+e.latlng.lat.toFixed(8); el.lon.value=+e.latlng.lng.toFixed(8); fromDD(); });
-
-  const c=map.getCenter(); el.lat.value=+c.lat.toFixed(6); el.lon.value=+c.lng.toFixed(6); fromDD();
-})();
-
-// ---------- boot ----------
-(async function boot(){
-  initMap();
-  await loadDataInitial();
-})();
-
-
