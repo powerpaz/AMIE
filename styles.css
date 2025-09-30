@@ -77,4 +77,3 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
   .tp-grid.tp-6{grid-template-columns:repeat(3,1fr)}
   .tp-grid.tp-utm{grid-template-columns:1fr 1fr}
 }
-
