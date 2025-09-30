@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Geoportal — IE Ecuador</title>
 
-  <!-- Leaflet core -->
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -25,9 +25,9 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css?v=2" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 
-  <!-- ENV (tus claves públicas anon de Supabase) -->
+  <!-- ENV (claves públicas anon de Supabase) -->
   <script>
     window.env = {
       SUPABASE_URL: "https://krjwqagkjuzrpxianvnu.supabase.co",
@@ -64,18 +64,9 @@
 
     <!-- KPIs -->
     <div class="kpis">
-      <div class="card">
-        <div class="k">Instituciones</div>
-        <div class="v" id="kpi-total">0</div>
-      </div>
-      <div class="card">
-        <div class="k">Provincias</div>
-        <div class="v" id="kpi-provincias">0</div>
-      </div>
-      <div class="card">
-        <div class="k">Tipos</div>
-        <div class="v" id="kpi-tipos">0</div>
-      </div>
+      <div class="card"><div class="k">Instituciones</div><div class="v" id="kpi-total">0</div></div>
+      <div class="card"><div class="k">Provincias</div><div class="v" id="kpi-provincias">0</div></div>
+      <div class="card"><div class="k">Tipos</div><div class="v" id="kpi-tipos">0</div></div>
     </div>
 
     <!-- Panel Listado -->
@@ -85,26 +76,20 @@
         <div class="pager">
           <button id="pg-prev" class="btn sm ghost">◀</button>
           <span id="pg-now">1</span>/<span id="pg-total">1</span>
-          <select id="pg-size" class="btn sm">
-            <option>25</option>
-            <option>50</option>
-            <option>100</option>
-          </select>
+          <select id="pg-size" class="btn sm"><option>25</option><option>50</option><option>100</option></select>
         </div>
       </div>
       <div class="table-wrap">
         <table id="grid">
-          <thead>
-            <tr>
-              <th>AMIE</th><th>Nombre</th><th>Tipo</th><th>Sostenimiento</th>
-              <th>Provincia</th><th>Cantón</th><th>Parroquia</th>
-            </tr>
-          </thead>
+          <thead><tr>
+            <th>AMIE</th><th>Nombre</th><th>Tipo</th><th>Sostenimiento</th>
+            <th>Provincia</th><th>Cantón</th><th>Parroquia</th>
+          </tr></thead>
           <tbody></tbody>
         </table>
       </div>
       <div class="panel-foot">
-        <button id="btn-clear-selection" class="btn danger ghost">Limpiar selección (0)</button>
+        <button id="btn-clear-selection" class="btn ghost">Limpiar selección (0)</button>
       </div>
     </div>
 
@@ -133,7 +118,6 @@
             <input id="tp-lon" placeholder="-78.183" />
           </div>
         </div>
-
         <div class="tp-row">
           <label>DMS</label>
           <div class="tp-grid tp-6">
@@ -145,7 +129,6 @@
             <input id="tp-lon-s" placeholder="Lon ″" />
           </div>
         </div>
-
         <div class="tp-row">
           <label>UTM</label>
           <div class="tp-grid tp-utm">
@@ -155,7 +138,6 @@
             <input id="tp-utm-n" placeholder="Norte (N)" />
           </div>
         </div>
-
         <div class="tp-row tp-hint">
           <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra; “Fijar punto” deja marcador.</small>
         </div>
@@ -164,6 +146,6 @@
   </div>
 
   <!-- App -->
-  <script src="app.js?v=2"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
