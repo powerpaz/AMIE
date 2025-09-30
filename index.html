@@ -1,133 +1,94 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Geoportal — Instituciones Educativas</title>
+  <title>Geoportal — IE Ecuador</title>
 
-  <link rel="stylesheet" href="styles.css" />
-
-  <!-- Leaflet -->
+  <!-- Leaflet core -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- Proj4 para transformaciones de proyecciones (UTM, etc.) -->
-<script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
-
   <!-- MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <!-- PapaParse (CSV fallback) -->
-  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Supabase v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+  <!-- Proj4 (transformaciones) -->
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="styles.css?v=2" />
+
+  <!-- ENV (tus claves públicas anon de Supabase) -->
+  <script>
+    window.env = {
+      SUPABASE_URL: "https://krjwqagkjuzrpxianvnu.supabase.co",
+      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ"
+    };
+  </script>
 </head>
 <body>
-  <!-- TOP NAV -->
-  <header class="nav">
+  <!-- Barra -->
+  <div class="nav">
     <div class="brand">
-      <div class="dot"></div>
-      <span>Geoportal — IE Ecuador</span>
+      <span class="dot"></span> Geoportal — IE Ecuador
     </div>
     <div class="searchbar">
-      <input id="q-amie" type="text" placeholder="🔎 Buscar AMIE..." />
-      <input id="q-nombre" type="text" placeholder="🔎 Buscar nombre..." />
+      <input id="q-amie" placeholder="Buscar AMIE..." />
+      <input id="q-nombre" placeholder="Buscar nombre..." />
       <button id="btn-buscar" class="btn primary">Buscar</button>
       <button id="btn-limpiar" class="btn ghost">Limpiar</button>
     </div>
-  </header>
+  </div>
 
-  <!-- MAP + PANELS -->
-  <main class="stage">
+  <div class="stage">
+    <!-- MAPA -->
     <div id="map"></div>
 
-<!-- Panel de Transformación de Coordenadas -->
-<div class="transform-panel" id="transform-panel">
-  <div class="tp-head">
-    <strong>Transformación</strong>
-    <div class="tp-actions">
-      <button class="btn sm ghost" id="tp-btn-center">Ir</button>
-      <button class="btn sm ghost" id="tp-btn-pin">Fijar punto</button>
-      <button class="btn sm ghost" id="tp-btn-copy">Copiar</button>
-    </div>
-  </div>
-  <div class="tp-body">
-    <div class="tp-row">
-      <label>Lat, Lon (DD)</label>
-      <div class="tp-grid">
-        <input id="tp-lat" placeholder="-1.831" />
-        <input id="tp-lon" placeholder="-78.183" />
-      </div>
-    </div>
-
-    <div class="tp-row">
-      <label>DMS</label>
-      <div class="tp-grid tp-6">
-        <input id="tp-lat-d" placeholder="Deg" />
-        <input id="tp-lat-m" placeholder="Min" />
-        <input id="tp-lat-s" placeholder="Seg" />
-        <input id="tp-lon-d" placeholder="Deg" />
-        <input id="tp-lon-m" placeholder="Min" />
-        <input id="tp-lon-s" placeholder="Seg" />
-      </div>
-    </div>
-
-    <div class="tp-row">
-      <label>UTM</label>
-      <div class="tp-grid tp-4">
-        <input id="tp-utm-zone" placeholder="Zona" />
-        <select id="tp-utm-hem">
-          <option value="N">N</option>
-          <option value="S" selected>S</option>
-        </select>
-        <input id="tp-utm-e" placeholder="Este (E)" />
-        <input id="tp-utm-n" placeholder="Norte (N)" />
-      </div>
-    </div>
-
-    <div class="tp-row tp-hint">
-      <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra el mapa; “Fijar punto” deja marcador.</small>
-    </div>
-  </div>
-</div>
-
-
-    <!-- FLOAT: Filters pill -->
+    <!-- Filtros -->
     <div class="pill filters">
-      <select id="f-provincia"><option value="">Provincia</option></select>
-      <select id="f-canton" disabled><option value="">Cantón</option></select>
-      <select id="f-parroquia" disabled><option value="">Parroquia</option></select>
-      <select id="f-sosten"><option value="">Sostenimiento</option></select>
-      <select id="f-tipo"><option value="">Tipo</option></select>
+      <select id="f-provincia"><option>Provincia</option></select>
+      <select id="f-canton" disabled><option>Cantón</option></select>
+      <select id="f-parroquia" disabled><option>Parroquia</option></select>
+      <select id="f-sosten"><option>Sostenimiento</option></select>
+      <select id="f-tipo"><option>Tipo</option></select>
     </div>
 
-    <!-- FLOAT: KPI cards -->
+    <!-- KPIs -->
     <div class="kpis">
       <div class="card">
         <div class="k">Instituciones</div>
-        <div id="kpi-total" class="v">0</div>
+        <div class="v" id="kpi-total">0</div>
       </div>
       <div class="card">
         <div class="k">Provincias</div>
-        <div id="kpi-provincias" class="v">0</div>
+        <div class="v" id="kpi-provincias">0</div>
       </div>
       <div class="card">
         <div class="k">Tipos</div>
-        <div id="kpi-tipos" class="v">0</div>
+        <div class="v" id="kpi-tipos">0</div>
       </div>
     </div>
 
-    <!-- RIGHT PANEL (table) -->
-    <aside class="panel">
+    <!-- Panel Listado -->
+    <div class="panel">
       <div class="panel-head">
         <strong>Listado</strong>
         <div class="pager">
-          <button id="pg-prev" class="btn sm">◀</button>
-          <span><span id="pg-now">1</span>/<span id="pg-total">1</span></span>
-          <button id="pg-next" class="btn sm">▶</button>
-          <select id="pg-size" class="sm">
-            <option>25</option><option>50</option><option>100</option>
+          <button id="pg-prev" class="btn sm ghost">◀</button>
+          <span id="pg-now">1</span>/<span id="pg-total">1</span>
+          <select id="pg-size" class="btn sm">
+            <option>25</option>
+            <option>50</option>
+            <option>100</option>
           </select>
         </div>
       </div>
@@ -135,8 +96,8 @@
         <table id="grid">
           <thead>
             <tr>
-              <th>AMIE</th><th>Nombre</th><th>Tipo</th>
-              <th>Sostenimiento</th><th>Provincia</th><th>Cantón</th><th>Parroquia</th>
+              <th>AMIE</th><th>Nombre</th><th>Tipo</th><th>Sostenimiento</th>
+              <th>Provincia</th><th>Cantón</th><th>Parroquia</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -145,26 +106,64 @@
       <div class="panel-foot">
         <button id="btn-clear-selection" class="btn danger ghost">Limpiar selección (0)</button>
       </div>
-    </aside>
-
-    <!-- FLOAT: action buttons (right) -->
-    <div class="fab-col">
-      <button class="fab" title="Ajustes">⚙️</button>
-      <button class="fab" title="Compartir">🔗</button>
-      <button class="fab" title="Ayuda">❓</button>
     </div>
 
-    <!-- HUD bottom -->
-    <footer class="hud">
-      <div class="chip">Estado: <span id="status">Listo.</span></div>
-      <div class="chip">Cursor: <span id="cursor">—</span></div>
+    <!-- HUD inferior -->
+    <div class="hud">
+      <div class="chip">Estado: <span id="status">Cargando...</span></div>
+      <div class="chip">Cursor: <span id="cursor">--</span></div>
       <div class="chip">Selección: <span id="selCount">0</span></div>
-    </footer>
-  </main>
+    </div>
 
-  <!-- Supabase + config + app -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
-  <script src="app.js"></script>
+    <!-- Panel Transformación -->
+    <div class="transform-panel" id="transform-panel">
+      <div class="tp-head">
+        <strong>Transformación</strong>
+        <div class="tp-actions">
+          <button class="btn sm ghost" id="tp-btn-center">Ir</button>
+          <button class="btn sm ghost" id="tp-btn-pin">Fijar punto</button>
+          <button class="btn sm ghost" id="tp-btn-copy">Copiar</button>
+        </div>
+      </div>
+      <div class="tp-body">
+        <div class="tp-row">
+          <label>Lat, Lon (DD)</label>
+          <div class="tp-grid tp-2">
+            <input id="tp-lat" placeholder="-1.831" />
+            <input id="tp-lon" placeholder="-78.183" />
+          </div>
+        </div>
+
+        <div class="tp-row">
+          <label>DMS</label>
+          <div class="tp-grid tp-6">
+            <input id="tp-lat-d" placeholder="Lat °" />
+            <input id="tp-lat-m" placeholder="Lat ′" />
+            <input id="tp-lat-s" placeholder="Lat ″" />
+            <input id="tp-lon-d" placeholder="Lon °" />
+            <input id="tp-lon-m" placeholder="Lon ′" />
+            <input id="tp-lon-s" placeholder="Lon ″" />
+          </div>
+        </div>
+
+        <div class="tp-row">
+          <label>UTM</label>
+          <div class="tp-grid tp-utm">
+            <input id="tp-utm-zone" placeholder="Zona" />
+            <select id="tp-utm-hem"><option value="N">N</option><option value="S" selected>S</option></select>
+            <input id="tp-utm-e" placeholder="Este (E)" />
+            <input id="tp-utm-n" placeholder="Norte (N)" />
+          </div>
+        </div>
+
+        <div class="tp-row tp-hint">
+          <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra; “Fijar punto” deja marcador.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App -->
+  <script src="app.js?v=2"></script>
 </body>
 </html>
