@@ -14,10 +14,10 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  <!-- PapaParse (CSV fallback) -->
+  <!-- PapaParse (opcional: CSV fallback) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-  <!-- Supabase v2 -->
+  <!-- Supabase v2 (UMD) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 
   <!-- Proj4 (transformaciones) -->
@@ -25,7 +25,7 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css?v=3" />
+  <link rel="stylesheet" href="styles.css?v=4" />
 
   <!-- ENV (claves públicas anon de Supabase) -->
   <script>
@@ -51,7 +51,7 @@
 
   <div class="stage">
     <!-- MAPA -->
-    <div id="map"></div>
+    <div id="map" aria-label="Mapa"></div>
 
     <!-- Filtros -->
     <div class="pill filters">
@@ -95,7 +95,7 @@
 
     <!-- HUD inferior -->
     <div class="hud">
-      <div class="chip">Estado: <span id="status">Cargando...</span></div>
+      <div class="chip">Estado: <span id="status">Inicializando…</span></div>
       <div class="chip">Cursor: <span id="cursor">--</span></div>
       <div class="chip">Selección: <span id="selCount">0</span></div>
     </div>
@@ -146,6 +146,6 @@
   </div>
 
   <!-- App -->
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
