@@ -20,8 +20,16 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .btn.sm{padding:6px 10px;border-radius:10px;background:#112031}
 
 /* Stage & Map */
+/* Cuando la tabla está visible, reservamos espacio a la derecha para que el mapa no quede debajo del panel */
 .stage{position:relative;height:calc(100vh - 58px);width:100%}
-#map{position:absolute;inset:12px 12px 86px 12px;border-radius:18px;border:1px solid rgba(255,255,255,.18);box-shadow:var(--shadow);overflow:hidden}
+#map{
+  position:absolute;
+  top:12px; left:12px; bottom:86px;
+  right:438px; /* reserva ancho aprox. del panel (420 + márgenes) */
+  border-radius:18px;border:1px solid rgba(255,255,255,.18);box-shadow:var(--shadow);overflow:hidden
+}
+/* Cuando la tabla está oculta, el mapa se expande a todo el ancho */
+body.table-hidden #map{ right:12px; }
 
 /* Filtros */
 .pill.filters{position:absolute;top:24px;left:28px;right:28px;display:flex;flex-wrap:wrap;gap:8px 10px;background:rgba(255,255,255,.10);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:var(--shadow);z-index:9999}
@@ -29,6 +37,7 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 
 /* Panel Listado */
 .panel{position:absolute;top:110px;right:28px;bottom:98px;width:420px;z-index:520;background:rgba(15,22,32,.95);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
+.panel.hidden{display:none;} /* para el botón toggle */
 .panel-head,.panel-foot{padding:10px 12px;background:#0f1a28;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .panel-foot{border-top:1px solid var(--border);border-bottom:none;margin-top:auto}
 .pager{display:flex;align-items:center;gap:8px}
@@ -66,6 +75,8 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 /* Responsive */
 @media (max-width:1100px){
   .panel{width:92vw;right:4vw;top:auto;height:46vh}
+  /* en pantallas chicas, el mapa ya ocupa todo, no reservamos margen fijo */
+  #map{right:12px}
   .pill.filters{top:16px;left:16px;right:16px;padding:8px;gap:6px 8px}
   .pill.filters select{flex:1 1 140px;max-width:200px}
   #map{inset:12px 12px 170px 12px}
