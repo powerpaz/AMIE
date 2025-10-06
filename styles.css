@@ -31,15 +31,15 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .pill.filters{position:absolute;top:24px;left:28px;right:28px;display:flex;flex-wrap:wrap;gap:8px 10px;background:rgba(255,255,255,.10);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:var(--shadow);z-index:9999}
 .pill.filters select{flex:1 1 160px;max-width:240px;padding:8px 10px;background:#111a25;border:1px solid rgba(255,255,255,.18);border-radius:10px;color:#e8f1ff}
 
-/* Panel Listado (centrado) */
+/* Panel Listado (derecha) */
 .panel{
   position:absolute;
-  left:50%; transform:translateX(-50%);        /* centrado horizontal */
-  top:110px; bottom:98px; width:74vw;           /* ancho amplio y centrado */
-  max-width:1100px; min-width:320px;
   z-index:520;background:rgba(15,22,32,.95);
   border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden
+}
+.panel.right{
+  right:28px; top:110px; bottom:98px; width:420px;
 }
 .panel.hidden{display:none;}
 .panel-head,.panel-foot{padding:10px 12px;background:#0f1a28;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -57,23 +57,23 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .hud{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:10px;z-index:540}
 .chip{background:var(--surface);color:var(--ink);border:1px solid rgba(0,0,0,.08);padding:9px 12px;border-radius:14px;box-shadow:0 8px 18px rgba(0,0,0,.2)}
 
-/* Transform Panel (centrada, más pequeña y tipografía reducida) */
+/* Transform Panel (izquierda, simétrica con la tabla; tipografía reducida) */
 .transform-panel{
   position:absolute;
-  left:50%; transform:translateX(-50%);
-  bottom:20px; width:520px; max-width:92vw; max-height:52vh; overflow:auto;
+  left:28px; top:110px; bottom:98px; width:460px;     /* simetría en top/bottom */
+  max-width:46vw; max-height:none; overflow:auto;
   background:rgba(15,22,32,.96); border:1px solid var(--border);
   border-radius:14px; box-shadow:var(--shadow); z-index:540; color:#e8f1ff;
-  backdrop-filter:blur(6px); font-size:12.5px; /* ↓ fuente general */
+  backdrop-filter:blur(6px); font-size:12.5px;
 }
-.tp-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0f1a28;border-bottom:1px solid var(--border)}
+.transform-panel .tp-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0f1a28;border-bottom:1px solid var(--border)}
 .tp-actions{display:flex;gap:6px}
-.tp-body{padding:8px 10px}
+.tp-body{padding:10px}
 .tp-row{margin-bottom:8px}
 .tp-row label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
 .tp-grid{display:grid;gap:8px}
 .tp-grid.tp-2{grid-template-columns:1fr 1fr}
-.tp-grid.tp-6{grid-template-columns:repeat(3,minmax(0,1fr))} /* 3 columnas visibles */
+.tp-grid.tp-6{grid-template-columns:repeat(3,minmax(0,1fr))} /* 3 columnas */
 .tp-grid.tp-utm{grid-template-columns:84px 68px 1fr 1fr}
 .transform-panel input,.transform-panel select{
   background:#111a25;border:1px solid rgba(255,255,255,.18);color:#e8f1ff;
@@ -86,8 +86,12 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .leaflet-control-layers,.leaflet-control-zoom{z-index:5000}
 
 /* Responsive */
-@media (max-width:1100px){
-  .panel{width:92vw;top:auto;height:46vh}
-  .tp-grid.tp-6{grid-template-columns:repeat(3,1fr)}
-  .tp-grid.tp-utm{grid-template-columns:1fr 1fr}
+@media (max-width:1200px){
+  .transform-panel{left:16px; right:auto; width:44vw}
+  .panel.right{right:16px}
+}
+@media (max-width:900px){
+  /* En pantallas chicas dejamos paneles apilados, pero siguen alineando fondo */
+  .transform-panel{top:auto; width:92vw; left:50%; transform:translateX(-50%); bottom:98px}
+  .panel.right{width:92vw; right:4vw; left:4vw}
 }
