@@ -12,7 +12,7 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .brand{display:flex;align-items:center;gap:10px;font-weight:600}
 .brand .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
 .searchbar{display:flex;gap:8px;align-items:center}
-.searchbar input{width:220px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0f1620;color:var(--text);outline:none}
+.searchbar input{width:220px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0f1620;color:#fff;outline:none}
 .btn{border:none;padding:10px 14px;border-radius:12px;cursor:pointer;color:#fff}
 .btn.primary{background:linear-gradient(135deg,var(--primary),var(--primary-2))}
 .btn.ghost{background:transparent;border:1px solid var(--border);color:#e6eefb}
@@ -25,11 +25,6 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 /* Filtros */
 .pill.filters{position:absolute;top:24px;left:28px;right:28px;display:flex;flex-wrap:wrap;gap:8px 10px;background:rgba(255,255,255,.10);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:var(--shadow);z-index:9999}
 .pill.filters select{flex:1 1 160px;max-width:240px;padding:8px 10px;background:#111a25;border:1px solid rgba(255,255,255,.18);border-radius:10px;color:#e8f1ff}
-
-/* KPIs */
-.kpis{position:absolute;top:24px;right:28px;display:flex;gap:12px;z-index:500}
-.card{background:linear-gradient(180deg,#122032,#0e1723);border:1px solid var(--border);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);min-width:150px}
-.card .k{color:var(--text-muted);font-size:12px}.card .v{font-size:20px;font-weight:700;letter-spacing:.2px}
 
 /* Panel Listado */
 .panel{position:absolute;top:110px;right:28px;bottom:98px;width:420px;z-index:520;background:rgba(15,22,32,.95);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
@@ -69,7 +64,6 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 /* Responsive */
 @media (max-width:1100px){
   .panel{width:92vw;right:4vw;top:auto;height:46vh}
-  .kpis{left:28px;right:auto;top:auto;bottom:112px}
   .pill.filters{top:16px;left:16px;right:16px;padding:8px;gap:6px 8px}
   .pill.filters select{flex:1 1 140px;max-width:200px}
   #map{inset:12px 12px 170px 12px}
