@@ -25,16 +25,15 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="styles.css?v=10" />
 
-  <!-- ENV (si usas archivo externo, puedes quitar este bloque) -->
+  <!-- ENV -->
   <script>
     window.env = window.env || {
       SUPABASE_URL: "https://krjwqagkjuzrpxianvnu.supabase.co",
       SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ"
     };
   </script>
-  <!-- Si prefieres: <script src="config.js"></script> -->
 </head>
 <body>
   <!-- Barra superior -->
@@ -52,7 +51,7 @@
       <input id="q-nombre" placeholder="Buscar nombre..." />
       <button id="btn-buscar" class="btn primary">Buscar</button>
       <button id="btn-limpiar" class="btn ghost">Limpiar</button>
-      <!-- Botón de encendido/apagado de la TABLA -->
+      <!-- Botón global: Ocultar/Mostrar tabla -->
       <button id="btn-toggle-table" class="btn ghost" title="Ocultar/mostrar tabla">Ocultar tabla</button>
     </div>
   </div>
@@ -70,16 +69,19 @@
       <select id="f-tipo"><option>Tipo</option></select>
     </div>
 
-    <!-- Panel Listado (tabla) -->
-    <div class="panel">
+    <!-- Panel Listado (tabla, centrada) -->
+    <div class="panel" id="panel-tabla">
       <div class="panel-head">
         <strong>Listado</strong>
-        <div class="pager">
-          <button id="pg-prev" class="btn sm ghost">◀</button>
-          <span id="pg-now">1</span>/<span id="pg-total">1</span>
-          <select id="pg-size" class="btn sm">
-            <option>25</option><option>50</option><option>100</option>
-          </select>
+        <div class="panel-controls">
+          <button id="btn-toggle-table-inner" class="btn sm ghost" title="Ocultar/mostrar tabla">Ocultar</button>
+          <div class="pager">
+            <button id="pg-prev" class="btn sm ghost">◀</button>
+            <span id="pg-now">1</span>/<span id="pg-total">1</span>
+            <select id="pg-size" class="btn sm">
+              <option>25</option><option>50</option><option>100</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="table-wrap">
@@ -103,7 +105,7 @@
       <div class="chip">Selección: <span id="selCount">0</span></div>
     </div>
 
-    <!-- Panel Transformación -->
+    <!-- Panel Transformación (calculadora, centrada) -->
     <div class="transform-panel" id="transform-panel">
       <div class="tp-head">
         <strong>Transformación</strong>
@@ -134,7 +136,6 @@
           </div>
         </div>
 
-        <!-- 17S PRINCIPAL -->
         <div class="tp-row">
           <label>UTM (17S — principal)</label>
           <div class="tp-grid tp-utm">
@@ -147,7 +148,6 @@
           </div>
         </div>
 
-        <!-- 18S ALTERNA -->
         <div class="tp-row">
           <label>UTM (18S — alterna)</label>
           <div class="tp-grid tp-utm">
@@ -168,6 +168,6 @@
   </div>
 
   <!-- App -->
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
