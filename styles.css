@@ -53,19 +53,46 @@ body.table-hidden #map{ right:12px; }
 .hud{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:10px;z-index:540}
 .chip{background:var(--surface);color:var(--ink);border:1px solid rgba(0,0,0,.08);padding:9px 12px;border-radius:14px;box-shadow:0 8px 18px rgba(0,0,0,.2)}
 
-/* Transform Panel */
-.transform-panel{position:absolute;left:28px;bottom:112px;width:520px;background:rgba(15,22,32,.96);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);z-index:540;color:#e8f1ff;backdrop-filter:blur(6px)}
-.tp-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#0f1a28;border-bottom:1px solid var(--border)}
+/* Transform Panel (más pequeño y más abajo) */
+.transform-panel{
+  position:absolute;
+  left:16px;
+  bottom:20px;                 /* ↓ más abajo */
+  width:360px;                 /* ↓ más compacta (antes ~520px) */
+  max-height:48vh;             /* evita tapar controles; scroll si hace falta */
+  overflow:auto;               /* scroll interno cuando el contenido exceda */
+  background:rgba(15,22,32,.96);
+  border:1px solid var(--border);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  z-index:540;
+  color:#e8f1ff;
+  backdrop-filter:blur(6px);
+}
+.tp-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0f1a28;border-bottom:1px solid var(--border)}
 .tp-actions{display:flex;gap:6px}
-.tp-body{padding:10px 12px}
-.tp-row{margin-bottom:10px}
+.tp-body{padding:8px 10px}
+.tp-row{margin-bottom:8px}
 .tp-row label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
 .tp-grid{display:grid;gap:8px}
 .tp-grid.tp-2{grid-template-columns:1fr 1fr}
-.tp-grid.tp-6{grid-template-columns:repeat(6,minmax(0,1fr))}
-.tp-grid.tp-utm{grid-template-columns:90px 70px 1fr 1fr}
-.transform-panel input,.transform-panel select{background:#111a25;border:1px solid rgba(255,255,255,.18);color:#e8f1ff;border-radius:10px;padding:8px 10px;outline:none;min-width:0}
+.tp-grid.tp-6{grid-template-columns:repeat(3,minmax(0,1fr))} /* más compacto en 3 cols */
+.tp-grid.tp-utm{grid-template-columns:80px 64px 1fr 1fr}
+.transform-panel input,.transform-panel select{
+  background:#111a25;border:1px solid rgba(255,255,255,.18);color:#e8f1ff;
+  border-radius:10px;padding:7px 9px;outline:none;min-width:0;font-size:13px
+}
 .tp-hint small{color:#b9c4d1}
+
+/* Ajuste responsive adicional */
+@media (max-width:1100px){
+  .transform-panel{
+    left:12px; right:12px; width:auto;
+    bottom:18px; max-height:42vh;
+  }
+  .tp-grid.tp-6{grid-template-columns:repeat(3,1fr)}
+  .tp-grid.tp-utm{grid-template-columns:1fr 1fr}
+}
 
 /* Leaflet placements */
 .leaflet-top.leaflet-left{top:88px!important}
