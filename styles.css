@@ -20,24 +20,28 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .btn.sm{padding:6px 10px;border-radius:10px;background:#112031}
 
 /* Stage & Map */
-/* Cuando la tabla está visible, reservamos espacio a la derecha para que el mapa no quede debajo del panel */
 .stage{position:relative;height:calc(100vh - 58px);width:100%}
 #map{
   position:absolute;
-  top:12px; left:12px; bottom:86px;
-  right:438px; /* reserva ancho aprox. del panel (420 + márgenes) */
+  top:12px; left:12px; bottom:86px; right:12px;
   border-radius:18px;border:1px solid rgba(255,255,255,.18);box-shadow:var(--shadow);overflow:hidden
 }
-/* Cuando la tabla está oculta, el mapa se expande a todo el ancho */
-body.table-hidden #map{ right:12px; }
 
 /* Filtros */
 .pill.filters{position:absolute;top:24px;left:28px;right:28px;display:flex;flex-wrap:wrap;gap:8px 10px;background:rgba(255,255,255,.10);border:1px solid var(--border);border-radius:14px;padding:8px;box-shadow:var(--shadow);z-index:9999}
 .pill.filters select{flex:1 1 160px;max-width:240px;padding:8px 10px;background:#111a25;border:1px solid rgba(255,255,255,.18);border-radius:10px;color:#e8f1ff}
 
-/* Panel Listado */
-.panel{position:absolute;top:110px;right:28px;bottom:98px;width:420px;z-index:520;background:rgba(15,22,32,.95);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden}
-.panel.hidden{display:none;} /* para el botón toggle */
+/* Panel Listado (centrado) */
+.panel{
+  position:absolute;
+  left:50%; transform:translateX(-50%);        /* centrado horizontal */
+  top:110px; bottom:98px; width:74vw;           /* ancho amplio y centrado */
+  max-width:1100px; min-width:320px;
+  z-index:520;background:rgba(15,22,32,.95);
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden
+}
+.panel.hidden{display:none;}
 .panel-head,.panel-foot{padding:10px 12px;background:#0f1a28;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .panel-foot{border-top:1px solid var(--border);border-bottom:none;margin-top:auto}
 .pager{display:flex;align-items:center;gap:8px}
@@ -53,21 +57,14 @@ body.table-hidden #map{ right:12px; }
 .hud{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:10px;z-index:540}
 .chip{background:var(--surface);color:var(--ink);border:1px solid rgba(0,0,0,.08);padding:9px 12px;border-radius:14px;box-shadow:0 8px 18px rgba(0,0,0,.2)}
 
-/* Transform Panel (más pequeño y más abajo) */
+/* Transform Panel (centrada, más pequeña y tipografía reducida) */
 .transform-panel{
   position:absolute;
-  left:16px;
-  bottom:20px;                 /* ↓ más abajo */
-  width:360px;                 /* ↓ más compacta (antes ~520px) */
-  max-height:48vh;             /* evita tapar controles; scroll si hace falta */
-  overflow:auto;               /* scroll interno cuando el contenido exceda */
-  background:rgba(15,22,32,.96);
-  border:1px solid var(--border);
-  border-radius:14px;
-  box-shadow:var(--shadow);
-  z-index:540;
-  color:#e8f1ff;
-  backdrop-filter:blur(6px);
+  left:50%; transform:translateX(-50%);
+  bottom:20px; width:520px; max-width:92vw; max-height:52vh; overflow:auto;
+  background:rgba(15,22,32,.96); border:1px solid var(--border);
+  border-radius:14px; box-shadow:var(--shadow); z-index:540; color:#e8f1ff;
+  backdrop-filter:blur(6px); font-size:12.5px; /* ↓ fuente general */
 }
 .tp-head{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0f1a28;border-bottom:1px solid var(--border)}
 .tp-actions{display:flex;gap:6px}
@@ -76,38 +73,21 @@ body.table-hidden #map{ right:12px; }
 .tp-row label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
 .tp-grid{display:grid;gap:8px}
 .tp-grid.tp-2{grid-template-columns:1fr 1fr}
-.tp-grid.tp-6{grid-template-columns:repeat(3,minmax(0,1fr))} /* más compacto en 3 cols */
-.tp-grid.tp-utm{grid-template-columns:80px 64px 1fr 1fr}
+.tp-grid.tp-6{grid-template-columns:repeat(3,minmax(0,1fr))} /* 3 columnas visibles */
+.tp-grid.tp-utm{grid-template-columns:84px 68px 1fr 1fr}
 .transform-panel input,.transform-panel select{
   background:#111a25;border:1px solid rgba(255,255,255,.18);color:#e8f1ff;
-  border-radius:10px;padding:7px 9px;outline:none;min-width:0;font-size:13px
+  border-radius:10px;padding:6px 8px;outline:none;min-width:0;font-size:12.5px
 }
 .tp-hint small{color:#b9c4d1}
-
-/* Ajuste responsive adicional */
-@media (max-width:1100px){
-  .transform-panel{
-    left:12px; right:12px; width:auto;
-    bottom:18px; max-height:42vh;
-  }
-  .tp-grid.tp-6{grid-template-columns:repeat(3,1fr)}
-  .tp-grid.tp-utm{grid-template-columns:1fr 1fr}
-}
 
 /* Leaflet placements */
 .leaflet-top.leaflet-left{top:88px!important}
 .leaflet-control-layers,.leaflet-control-zoom{z-index:5000}
-.leaflet-bottom.leaflet-left{left:22px!important;bottom:22px!important}
 
 /* Responsive */
 @media (max-width:1100px){
-  .panel{width:92vw;right:4vw;top:auto;height:46vh}
-  /* en pantallas chicas, el mapa ya ocupa todo, no reservamos margen fijo */
-  #map{right:12px}
-  .pill.filters{top:16px;left:16px;right:16px;padding:8px;gap:6px 8px}
-  .pill.filters select{flex:1 1 140px;max-width:200px}
-  #map{inset:12px 12px 170px 12px}
-  .transform-panel{left:16px;right:16px;width:auto;bottom:176px}
+  .panel{width:92vw;top:auto;height:46vh}
   .tp-grid.tp-6{grid-template-columns:repeat(3,1fr)}
   .tp-grid.tp-utm{grid-template-columns:1fr 1fr}
 }
