@@ -1,4 +1,4 @@
-/* Geoportal IE — App (diagnóstico Supabase + mapeo flexible) */
+/* Geoportal IE — App (diagnóstico Supabase + toggle tabla + base map Satellite) */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const setStatus = (t) => ($("#status").textContent = t);
@@ -12,7 +12,8 @@ const state = {
   pageSize: 25,
   selected: new Set(),
   mcg: null,
-  debug: new URLSearchParams(location.search).get("debug") === "1"
+  debug: new URLSearchParams(location.search).get("debug") === "1",
+  baseLayers: {}
 };
 
 function diag(msg, obj){
@@ -25,7 +26,7 @@ function diag(msg, obj){
   setTimeout(()=>chip.remove(), 7000);
 }
 
-/* ---------- Supabase helpers ---------- */
+/* ---------- Supabase ---------- */
 async function pingSupabase(client){
   try{
     const { error } = await client.from("instituciones").select("amie", { count:"exact", head:true });
@@ -36,21 +37,16 @@ async function pingSupabase(client){
   }
 }
 
-/* Intenta leer detectando columnas reales */
 async function readInstituciones(supa){
-  // Trae algunas filas para detectar nombres reales
-  const { data: sample, error: e1 } = await supa
-    .from("instituciones")
-    .select("*")
-    .limit(50);
+  const { data: sample, error: e1 } = await supa.from("instituciones").select("*").limit(50);
   if (e1) throw e1;
   if (!sample || sample.length === 0) return [];
 
-  // Encuentra claves posibles
-  const cols = Object.keys(sample[0]).reduce((acc,k)=>{
-    acc[k.toLowerCase()] = k; return acc;
-  }, {});
-  const pick = (cands) => cands.map(c=>c.toLowerCase()).find(c=>cols[c]) ? cols[cands.map(c=>c.toLowerCase()).find(c=>cols[c])] : null;
+  const cols = Object.keys(sample[0]).reduce((acc,k)=>{ acc[k.toLowerCase()] = k; return acc; },{});
+  const pick = (cands) => {
+    const key = cands.map(c=>c.toLowerCase()).find(c=>cols[c]);
+    return key ? cols[key] : null;
+  };
 
   const mapCols = {
     amie:        pick(["amie","codigo_amie","id_amie"]),
@@ -63,29 +59,22 @@ async function readInstituciones(supa){
     lat:         pick(["lat","latitud","latitude","y"]),
     lon:         pick(["lon","long","longitud","longitude","x"]),
   };
-
   if (state.debug) console.table(mapCols);
 
-  // Si falta lat/lon no podremos dibujar
   if (!mapCols.lat || !mapCols.lon) {
-    throw new Error("No se detectaron columnas de coordenadas (lat/lon/latitud/longitud).");
+    throw new Error("No se detectaron columnas lat/lon.");
   }
 
-  // Vuelve a consultar sólo columnas necesarias (eficiente)
   const selectList = [
     mapCols.amie, mapCols.nombre, mapCols.tipo, mapCols.sosten,
     mapCols.provincia, mapCols.canton, mapCols.parroquia,
     mapCols.lat, mapCols.lon
   ].filter(Boolean).join(",");
 
-  const { data, error } = await supa
-    .from("instituciones")
-    .select(selectList)
-    .limit(50000);
+  const { data, error } = await supa.from("instituciones").select(selectList).limit(50000);
   if (error) throw error;
 
-  // Normaliza
-  const rows = (data||[]).map(r => ({
+  return (data||[]).map(r => ({
     amie: r[mapCols.amie] ?? "",
     nombre: r[mapCols.nombre] ?? "",
     tipo: mapCols.tipo ? r[mapCols.tipo] : "",
@@ -96,8 +85,6 @@ async function readInstituciones(supa){
     lat: parseFloat(r[mapCols.lat]),
     lon: parseFloat(r[mapCols.lon]),
   })).filter(d => Number.isFinite(d.lat) && Number.isFinite(d.lon));
-
-  return rows;
 }
 
 /* ---------- Carga de datos ---------- */
@@ -122,12 +109,12 @@ async function loadData() {
     const rows = await readInstituciones(supa);
     state.data = rows;
     if (rows.length === 0) {
-      diag("Supabase respondió 0 filas. ¿Tabla vacía o filtros/columnas no coinciden?");
+      diag("Supabase respondió 0 filas. ¿Tabla vacía o columnas sin coordenadas?");
       return loadFromCSV();
     }
     diag(`Supabase OK: ${rows.length} filas.`);
   } catch (e) {
-    diag("Error leyendo tabla 'instituciones': " + e.message);
+    diag("Error leyendo 'instituciones': " + e.message);
     return loadFromCSV();
   }
 }
@@ -155,14 +142,26 @@ async function loadFromCSV(){
   }
 }
 
-/* ---------- Mapa ---------- */
+/* ---------- Mapa (OSM + Satélite) ---------- */
 let map;
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([-1.83, -78.18], 6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18, attribution: "&copy; OpenStreetMap"
-  }).addTo(map);
 
+  // Base layers
+  const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, attribution: "&copy; OpenStreetMap"
+  });
+  const esriSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, attribution: "Tiles &copy; Esri"
+  });
+
+  // Arranque con OSM por defecto
+  osm.addTo(map);
+
+  state.baseLayers = { "OSM": osm, "Satélite (Esri)": esriSat };
+  L.control.layers(state.baseLayers, null, { position: "topleft", collapsed: true }).addTo(map);
+
+  // Cluster
   state.mcg = L.markerClusterGroup();
   state.mcg.addTo(map);
 
@@ -350,6 +349,38 @@ function setupTransformPanel() {
   $("#tp-lat").addEventListener("input", ddToUTM);
   $("#tp-lon").addEventListener("input", ddToUTM);
 }
+
+/* ---------- Toggle mostrar/ocultar TABLA + expansión del mapa ---------- */
+(function setupTableToggle(){
+  const panel = document.querySelector(".panel");
+  const btn = document.getElementById("btn-toggle-table");
+  if (!panel || !btn) return;
+
+  const applyBodyClass = (hidden) => {
+    document.body.classList.toggle("table-hidden", hidden);
+  };
+
+  // Estado persistente
+  const saved = localStorage.getItem("tableHidden") === "1";
+  if (saved) {
+    panel.classList.add("hidden");
+    btn.textContent = "Mostrar tabla";
+    btn.setAttribute("aria-pressed", "true");
+    applyBodyClass(true);
+  } else {
+    btn.setAttribute("aria-pressed", "false");
+    applyBodyClass(false);
+  }
+
+  btn.addEventListener("click", () => {
+    const hidden = panel.classList.toggle("hidden");
+    btn.textContent = hidden ? "Mostrar tabla" : "Ocultar tabla";
+    btn.setAttribute("aria-pressed", hidden ? "true" : "false");
+    localStorage.setItem("tableHidden", hidden ? "1" : "0");
+    applyBodyClass(hidden);
+    setTimeout(()=> map.invalidateSize(), 200); // recalcula tamaño del mapa
+  });
+})();
 
 /* ---------- Eventos e Init ---------- */
 bus.addEventListener("filters-change", () => applyFilters());
