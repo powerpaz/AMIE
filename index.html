@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Geovisor_Calculadora Geodésica</title>
+  <title>Geoportal — IE Ecuador</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -25,25 +25,23 @@
   <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
 
   <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 
-  <!-- ENV (si usas config.js, puedes quitar este bloque) -->
+  <!-- ENV (si usas archivo externo, puedes quitar este bloque) -->
   <script>
-    // Si prefieres variables externas, comenta esto y usa config.js
     window.env = window.env || {
       SUPABASE_URL: "https://krjwqagkjuzrpxianvnu.supabase.co",
       SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ"
     };
   </script>
-  <!-- Si usas archivo aparte, descomenta: -->
-  <!-- <script src="config.js"></script> -->
+  <!-- Si prefieres: <script src="config.js"></script> -->
 </head>
 <body>
   <!-- Barra superior -->
   <div class="nav">
     <div class="brand">
       <span class="dot"></span>
-      <span>Geovisor_Calculadora Geodésica</span>
+      <span>Geoportal — IE Ecuador</span>
     </div>
 
     <!-- Logo institucional -->
@@ -54,6 +52,8 @@
       <input id="q-nombre" placeholder="Buscar nombre..." />
       <button id="btn-buscar" class="btn primary">Buscar</button>
       <button id="btn-limpiar" class="btn ghost">Limpiar</button>
+      <!-- Botón de encendido/apagado de la TABLA -->
+      <button id="btn-toggle-table" class="btn ghost" title="Ocultar/mostrar tabla">Ocultar tabla</button>
     </div>
   </div>
 
@@ -70,7 +70,7 @@
       <select id="f-tipo"><option>Tipo</option></select>
     </div>
 
-    <!-- Panel Listado -->
+    <!-- Panel Listado (tabla) -->
     <div class="panel">
       <div class="panel-head">
         <strong>Listado</strong>
@@ -168,6 +168,6 @@
   </div>
 
   <!-- App -->
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
