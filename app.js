@@ -1,4 +1,4 @@
-/* Geoportal IE — App (con verificación de Supabase y logo en navbar) */
+/* Geoportal IE — App (diagnóstico Supabase + mapeo flexible) */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const setStatus = (t) => ($("#status").textContent = t);
@@ -12,67 +12,150 @@ const state = {
   pageSize: 25,
   selected: new Set(),
   mcg: null,
+  debug: new URLSearchParams(location.search).get("debug") === "1"
 };
 
+function diag(msg, obj){
+  setStatus(msg);
+  if (state.debug) console.log("[DIAG]", msg, obj ?? "");
+  const chip = document.createElement("div");
+  chip.className = "chip";
+  chip.textContent = msg;
+  document.querySelector(".hud").prepend(chip);
+  setTimeout(()=>chip.remove(), 7000);
+}
+
+/* ---------- Supabase helpers ---------- */
 async function pingSupabase(client){
   try{
-    const { data, error } = await client.from("instituciones").select("amie").limit(1);
+    const { error } = await client.from("instituciones").select("amie", { count:"exact", head:true });
     if (error) throw error;
     return true;
   }catch(e){
-    console.warn("Supabase ping falló:", e.message);
-    return false;
+    return e.message || String(e);
   }
 }
 
+/* Intenta leer detectando columnas reales */
+async function readInstituciones(supa){
+  // Trae algunas filas para detectar nombres reales
+  const { data: sample, error: e1 } = await supa
+    .from("instituciones")
+    .select("*")
+    .limit(50);
+  if (e1) throw e1;
+  if (!sample || sample.length === 0) return [];
+
+  // Encuentra claves posibles
+  const cols = Object.keys(sample[0]).reduce((acc,k)=>{
+    acc[k.toLowerCase()] = k; return acc;
+  }, {});
+  const pick = (cands) => cands.map(c=>c.toLowerCase()).find(c=>cols[c]) ? cols[cands.map(c=>c.toLowerCase()).find(c=>cols[c])] : null;
+
+  const mapCols = {
+    amie:        pick(["amie","codigo_amie","id_amie"]),
+    nombre:      pick(["nombre","nom_ie","institucion","name"]),
+    tipo:        pick(["tipo","tipo_ie","categoria"]),
+    sosten:      pick(["sostenimiento","sosten","regimen"]),
+    provincia:   pick(["provincia","dpa_provincia","prov"]),
+    canton:      pick(["canton","dpa_canton","cantón","canton_nombre"]),
+    parroquia:   pick(["parroquia","dpa_parroquia","parr","parroquia_nombre"]),
+    lat:         pick(["lat","latitud","latitude","y"]),
+    lon:         pick(["lon","long","longitud","longitude","x"]),
+  };
+
+  if (state.debug) console.table(mapCols);
+
+  // Si falta lat/lon no podremos dibujar
+  if (!mapCols.lat || !mapCols.lon) {
+    throw new Error("No se detectaron columnas de coordenadas (lat/lon/latitud/longitud).");
+  }
+
+  // Vuelve a consultar sólo columnas necesarias (eficiente)
+  const selectList = [
+    mapCols.amie, mapCols.nombre, mapCols.tipo, mapCols.sosten,
+    mapCols.provincia, mapCols.canton, mapCols.parroquia,
+    mapCols.lat, mapCols.lon
+  ].filter(Boolean).join(",");
+
+  const { data, error } = await supa
+    .from("instituciones")
+    .select(selectList)
+    .limit(50000);
+  if (error) throw error;
+
+  // Normaliza
+  const rows = (data||[]).map(r => ({
+    amie: r[mapCols.amie] ?? "",
+    nombre: r[mapCols.nombre] ?? "",
+    tipo: mapCols.tipo ? r[mapCols.tipo] : "",
+    sostenimiento: mapCols.sosten ? r[mapCols.sosten] : "",
+    provincia: mapCols.provincia ? r[mapCols.provincia] : "",
+    canton: mapCols.canton ? r[mapCols.canton] : "",
+    parroquia: mapCols.parroquia ? r[mapCols.parroquia] : "",
+    lat: parseFloat(r[mapCols.lat]),
+    lon: parseFloat(r[mapCols.lon]),
+  })).filter(d => Number.isFinite(d.lat) && Number.isFinite(d.lon));
+
+  return rows;
+}
+
+/* ---------- Carga de datos ---------- */
 async function loadData() {
   setStatus("Cargando datos…");
+
   const hasEnv = window.env && window.env.SUPABASE_URL && window.env.SUPABASE_KEY;
-
-  if (hasEnv) {
-    try {
-      const supa = window.supabase.createClient(window.env.SUPABASE_URL, window.env.SUPABASE_KEY);
-      const ok = await pingSupabase(supa);
-      if (!ok) throw new Error("No se pudo leer la tabla. Revisa: nombre de tabla 'instituciones', columnas (amie,nombre,tipo,sostenimiento,provincia,canton,parroquia,lat,lon) y reglas RLS.");
-
-      const { data, error } = await supa
-        .from("instituciones")
-        .select("amie,nombre,tipo,sostenimiento,provincia,canton,parroquia,lat,lon")
-        .limit(50000);
-      if (error) throw error;
-
-      state.data = (data || []).filter(d => isFinite(d.lat) && isFinite(d.lon));
-      setStatus(`Datos desde Supabase: ${state.data.length}`);
-      return;
-    } catch (e) {
-      console.warn("Lectura Supabase falló, usando CSV local:", e.message);
-      setStatus("Supabase no disponible, usando CSV local…");
-    }
-  } else {
-    console.warn("ENV Supabase no definido (window.env). Usaré CSV.");
-    setStatus("Sin credenciales, usando CSV local…");
+  if (!hasEnv) {
+    diag("Sin credenciales Supabase (window.env). Uso CSV local.");
+    return loadFromCSV();
   }
 
-  // Fallback CSV local
-  const csvUrl = "data/instituciones_geo_fixed.csv";
-  const res = await fetch(csvUrl);
-  const text = await res.text();
-  const parsed = Papa.parse(text, { header: true, dynamicTyping: true });
-  state.data = parsed.data.map(r => ({
-      amie: r.amie || r.AMIE || r.amie_code,
-      nombre: r.nombre || r.NOMBRE,
-      tipo: r.tipo || r.TIPO,
-      sostenimiento: r.sostenimiento || r.SOSTENIMIENTO,
-      provincia: r.provincia || r.PROVINCIA,
-      canton: r.canton || r.CANTON,
-      parroquia: r.parroquia || r.PARROQUIA,
-      lat: Number(r.lat || r.LAT || r.latitud),
-      lon: Number(r.lon || r.LON || r.longitud),
-    }))
-    .filter(d => isFinite(d.lat) && isFinite(d.lon));
-  setStatus(`Datos desde CSV: ${state.data.length}`);
+  const supa = window.supabase.createClient(window.env.SUPABASE_URL, window.env.SUPABASE_KEY);
+  const ping = await pingSupabase(supa);
+  if (ping !== true) {
+    diag("Supabase no disponible o RLS bloquea lectura: " + ping);
+    diag("Reviso CSV local de respaldo…");
+    return loadFromCSV();
+  }
+
+  try {
+    const rows = await readInstituciones(supa);
+    state.data = rows;
+    if (rows.length === 0) {
+      diag("Supabase respondió 0 filas. ¿Tabla vacía o filtros/columnas no coinciden?");
+      return loadFromCSV();
+    }
+    diag(`Supabase OK: ${rows.length} filas.`);
+  } catch (e) {
+    diag("Error leyendo tabla 'instituciones': " + e.message);
+    return loadFromCSV();
+  }
 }
 
+async function loadFromCSV(){
+  try{
+    const csvUrl = "data/instituciones_geo_fixed.csv";
+    const res = await fetch(csvUrl);
+    const text = await res.text();
+    const parsed = Papa.parse(text, { header: true, dynamicTyping: true });
+    state.data = parsed.data.map(r => ({
+      amie: r.amie || r.AMIE || r.amie_code,
+      nombre: r.nombre || r.NOMBRE || r.institucion || r.Name,
+      tipo: r.tipo || r.TIPO || r.categoria,
+      sostenimiento: r.sostenimiento || r.SOSTENIMIENTO || r.regimen,
+      provincia: r.provincia || r.PROVINCIA || r.prov,
+      canton: r.canton || r.CANTON || r.cantón,
+      parroquia: r.parroquia || r.PARROQUIA,
+      lat: parseFloat(r.lat || r.LAT || r.latitud || r.latitude || r.y),
+      lon: parseFloat(r.lon || r.LON || r.longitud || r.longitude || r.x),
+    })).filter(d => Number.isFinite(d.lat) && Number.isFinite(d.lon));
+    diag(`CSV local OK: ${state.data.length} filas.`);
+  }catch(e){
+    diag("No se pudo cargar CSV local: " + e.message);
+  }
+}
+
+/* ---------- Mapa ---------- */
 let map;
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([-1.83, -78.18], 6);
@@ -95,23 +178,20 @@ function renderMarkers(rows) {
     m.bindPopup(`
       <strong>${r.nombre}</strong><br/>
       AMIE: ${r.amie}<br/>
-      ${r.tipo} — ${r.sostenimiento}<br/>
-      ${r.provincia} / ${r.canton} / ${r.parroquia}
+      ${r.tipo ?? ""} ${r.sostenimiento ? `— ${r.sostenimiento}` : ""}<br/>
+      ${[r.provincia,r.canton,r.parroquia].filter(Boolean).join(" / ")}
     `);
     state.mcg.addLayer(m);
   });
 }
 
+/* ---------- Filtros / Tabla ---------- */
 function distinct(arr, key) {
   return [...new Set(arr.map(x => (x[key] ?? "")).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
 }
 function fillSelect(sel, opts) {
   const el = $(sel); el.innerHTML = "";
-  opts.forEach(v => {
-    const o = document.createElement("option");
-    o.textContent = v; o.value = v;
-    el.appendChild(o);
-  });
+  opts.forEach(v => { const o=document.createElement("option"); o.textContent=v; o.value=v; el.appendChild(o); });
 }
 function fillFilters() {
   const d = state.data;
@@ -144,7 +224,6 @@ function onCanton() {
   $("#f-parroquia").disabled = false;
   emit("filters-change");
 }
-
 function applyFilters() {
   const qAmie = $("#q-amie").value.trim();
   const qNombre = $("#q-nombre").value.trim().toLowerCase();
@@ -170,7 +249,6 @@ function applyFilters() {
   emit("page-change");
   renderMarkers(rows);
 }
-
 function renderTable() {
   const tbody = $("#grid tbody");
   tbody.innerHTML = "";
@@ -204,7 +282,6 @@ function renderTable() {
     tbody.appendChild(tr);
   });
 }
-
 function setupPaging() {
   $("#pg-prev").addEventListener("click", () => {
     if (state.page > 1) { state.page--; emit("page-change"); }
@@ -214,7 +291,6 @@ function setupPaging() {
     state.page = 1; emit("page-change");
   });
 }
-
 function setupSearch() {
   $("#btn-buscar").addEventListener("click", applyFilters);
   $("#btn-limpiar").addEventListener("click", () => {
@@ -238,7 +314,7 @@ function setupSearch() {
   });
 }
 
-/* Transformación 17S/18S */
+/* ---------- Transformación ---------- */
 function setupTransformPanel() {
   map.on("click", (e) => {
     $("#tp-lat").value = e.latlng.lat.toFixed(6);
@@ -275,11 +351,10 @@ function setupTransformPanel() {
   $("#tp-lon").addEventListener("input", ddToUTM);
 }
 
-/* Eventos */
+/* ---------- Eventos e Init ---------- */
 bus.addEventListener("filters-change", () => applyFilters());
 bus.addEventListener("page-change", () => renderTable());
 
-/* Init */
 (async function main(){
   initMap();
   setupPaging();
