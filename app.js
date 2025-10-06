@@ -1,4 +1,4 @@
-/* Geoportal IE — App (diagnóstico Supabase + mapeo flexible) */
+/* Geoportal IE — App (Supabase diag + toggle tabla sincronizado + centrado + basemaps + overlay) */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const setStatus = (t) => ($("#status").textContent = t);
@@ -12,7 +12,9 @@ const state = {
   pageSize: 25,
   selected: new Set(),
   mcg: null,
-  debug: new URLSearchParams(location.search).get("debug") === "1"
+  debug: new URLSearchParams(location.search).get("debug") === "1",
+  baseLayers: {},
+  overlays: {}
 };
 
 function diag(msg, obj){
@@ -25,7 +27,7 @@ function diag(msg, obj){
   setTimeout(()=>chip.remove(), 7000);
 }
 
-/* ---------- Supabase helpers ---------- */
+/* ---------- Supabase ---------- */
 async function pingSupabase(client){
   try{
     const { error } = await client.from("instituciones").select("amie", { count:"exact", head:true });
@@ -35,22 +37,16 @@ async function pingSupabase(client){
     return e.message || String(e);
   }
 }
-
-/* Intenta leer detectando columnas reales */
 async function readInstituciones(supa){
-  // Trae algunas filas para detectar nombres reales
-  const { data: sample, error: e1 } = await supa
-    .from("instituciones")
-    .select("*")
-    .limit(50);
+  const { data: sample, error: e1 } = await supa.from("instituciones").select("*").limit(50);
   if (e1) throw e1;
   if (!sample || sample.length === 0) return [];
 
-  // Encuentra claves posibles
-  const cols = Object.keys(sample[0]).reduce((acc,k)=>{
-    acc[k.toLowerCase()] = k; return acc;
-  }, {});
-  const pick = (cands) => cands.map(c=>c.toLowerCase()).find(c=>cols[c]) ? cols[cands.map(c=>c.toLowerCase()).find(c=>cols[c])] : null;
+  const cols = Object.keys(sample[0]).reduce((acc,k)=>{ acc[k.toLowerCase()] = k; return acc; },{});
+  const pick = (cands) => {
+    const key = cands.map(c=>c.toLowerCase()).find(c=>cols[c]);
+    return key ? cols[key] : null;
+  };
 
   const mapCols = {
     amie:        pick(["amie","codigo_amie","id_amie"]),
@@ -63,29 +59,20 @@ async function readInstituciones(supa){
     lat:         pick(["lat","latitud","latitude","y"]),
     lon:         pick(["lon","long","longitud","longitude","x"]),
   };
-
   if (state.debug) console.table(mapCols);
 
-  // Si falta lat/lon no podremos dibujar
-  if (!mapCols.lat || !mapCols.lon) {
-    throw new Error("No se detectaron columnas de coordenadas (lat/lon/latitud/longitud).");
-  }
+  if (!mapCols.lat || !mapCols.lon) throw new Error("No se detectaron columnas lat/lon.");
 
-  // Vuelve a consultar sólo columnas necesarias (eficiente)
   const selectList = [
     mapCols.amie, mapCols.nombre, mapCols.tipo, mapCols.sosten,
     mapCols.provincia, mapCols.canton, mapCols.parroquia,
     mapCols.lat, mapCols.lon
   ].filter(Boolean).join(",");
 
-  const { data, error } = await supa
-    .from("instituciones")
-    .select(selectList)
-    .limit(50000);
+  const { data, error } = await supa.from("instituciones").select(selectList).limit(50000);
   if (error) throw error;
 
-  // Normaliza
-  const rows = (data||[]).map(r => ({
+  return (data||[]).map(r => ({
     amie: r[mapCols.amie] ?? "",
     nombre: r[mapCols.nombre] ?? "",
     tipo: mapCols.tipo ? r[mapCols.tipo] : "",
@@ -96,42 +83,28 @@ async function readInstituciones(supa){
     lat: parseFloat(r[mapCols.lat]),
     lon: parseFloat(r[mapCols.lon]),
   })).filter(d => Number.isFinite(d.lat) && Number.isFinite(d.lon));
-
-  return rows;
 }
 
-/* ---------- Carga de datos ---------- */
+/* ---------- Carga ---------- */
 async function loadData() {
   setStatus("Cargando datos…");
-
   const hasEnv = window.env && window.env.SUPABASE_URL && window.env.SUPABASE_KEY;
-  if (!hasEnv) {
-    diag("Sin credenciales Supabase (window.env). Uso CSV local.");
-    return loadFromCSV();
-  }
+  if (!hasEnv) { diag("Sin credenciales Supabase (window.env). Uso CSV local."); return loadFromCSV(); }
 
   const supa = window.supabase.createClient(window.env.SUPABASE_URL, window.env.SUPABASE_KEY);
   const ping = await pingSupabase(supa);
-  if (ping !== true) {
-    diag("Supabase no disponible o RLS bloquea lectura: " + ping);
-    diag("Reviso CSV local de respaldo…");
-    return loadFromCSV();
-  }
+  if (ping !== true) { diag("Supabase no disponible o RLS bloquea lectura: " + ping); diag("Reviso CSV local de respaldo…"); return loadFromCSV(); }
 
   try {
     const rows = await readInstituciones(supa);
     state.data = rows;
-    if (rows.length === 0) {
-      diag("Supabase respondió 0 filas. ¿Tabla vacía o filtros/columnas no coinciden?");
-      return loadFromCSV();
-    }
+    if (rows.length === 0) { diag("Supabase respondió 0 filas. ¿Tabla vacía o sin coordenadas?"); return loadFromCSV(); }
     diag(`Supabase OK: ${rows.length} filas.`);
   } catch (e) {
-    diag("Error leyendo tabla 'instituciones': " + e.message);
+    diag("Error leyendo 'instituciones': " + e.message);
     return loadFromCSV();
   }
 }
-
 async function loadFromCSV(){
   try{
     const csvUrl = "data/instituciones_geo_fixed.csv";
@@ -155,14 +128,43 @@ async function loadFromCSV(){
   }
 }
 
-/* ---------- Mapa ---------- */
+/* ---------- Mapa (OSM + Satélite + WorldStreet + Positron + Overlay rótulos) ---------- */
 let map;
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([-1.83, -78.18], 6);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 18, attribution: "&copy; OpenStreetMap"
-  }).addTo(map);
 
+  const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, attribution: "&copy; OpenStreetMap"
+  });
+  const esriSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, attribution: "Tiles &copy; Esri"
+  });
+  const esriStreet = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", {
+    maxZoom: 19, attribution: "Tiles &copy; Esri WorldStreetMap"
+  });
+  const cartoPositron = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19, subdomains: "abcd",
+    attribution: "&copy; CartoDB, OpenStreetMap"
+  });
+  const esriLabels = L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Labels & Boundaries &copy; Esri", pane: "overlayPane" }
+  );
+
+  // Base por defecto
+  osm.addTo(map);
+
+  state.baseLayers = {
+    "OSM": osm,
+    "Satélite (Esri)": esriSat,
+    "Esri Street": esriStreet,
+    "Carto Positron": cartoPositron
+  };
+  state.overlays = { "Rótulos (Esri)": esriLabels };
+
+  L.control.layers(state.baseLayers, state.overlays, { position: "topleft", collapsed: true }).addTo(map);
+
+  // Cluster
   state.mcg = L.markerClusterGroup();
   state.mcg.addTo(map);
 
@@ -350,6 +352,30 @@ function setupTransformPanel() {
   $("#tp-lat").addEventListener("input", ddToUTM);
   $("#tp-lon").addEventListener("input", ddToUTM);
 }
+
+/* ---------- Toggle tabla (dos botones sincronizados) ---------- */
+(function setupTableToggle(){
+  const panel = $("#panel-tabla");
+  const btnTop = $("#btn-toggle-table");
+  const btnInner = $("#btn-toggle-table-inner");
+  if (!panel || !btnTop || !btnInner) return;
+
+  function apply(hidden){
+    panel.classList.toggle("hidden", hidden);
+    btnTop.textContent   = hidden ? "Mostrar tabla" : "Ocultar tabla";
+    btnInner.textContent = hidden ? "Mostrar"       : "Ocultar";
+    btnTop.setAttribute("aria-pressed", hidden ? "true" : "false");
+    btnInner.setAttribute("aria-pressed", hidden ? "true" : "false");
+    localStorage.setItem("tableHidden", hidden ? "1" : "0");
+    setTimeout(()=> map.invalidateSize(), 200);
+  }
+
+  const saved = localStorage.getItem("tableHidden") === "1";
+  apply(saved);
+
+  btnTop.addEventListener("click", () => apply(!panel.classList.contains("hidden")));
+  btnInner.addEventListener("click", () => apply(!panel.classList.contains("hidden")));
+})();
 
 /* ---------- Eventos e Init ---------- */
 bus.addEventListener("filters-change", () => applyFilters());
