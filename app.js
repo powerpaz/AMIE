@@ -1,45 +1,56 @@
-/* Geoportal IE — App (sin KPIs) */
-
-/* ------------------ Helpers ------------------ */
+/* Geoportal IE — App (con verificación de Supabase y logo en navbar) */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const setStatus = (t) => ($("#status").textContent = t);
-
-/* Simple pub/sub para filtros/paginación */
 const bus = new EventTarget();
 const emit = (type, detail={}) => bus.dispatchEvent(new CustomEvent(type,{detail}));
 
-/* ------------------ Estado global ------------------ */
 const state = {
-  data: [],            // registros completos
-  view: [],            // registros luego de filtros/búsqueda
+  data: [],
+  view: [],
   page: 1,
   pageSize: 25,
   selected: new Set(),
-  markers: null,
-  mcg: null,           // marker cluster group
+  mcg: null,
 };
 
-/* ------------------ Carga de datos ------------------ */
+async function pingSupabase(client){
+  try{
+    const { data, error } = await client.from("instituciones").select("amie").limit(1);
+    if (error) throw error;
+    return true;
+  }catch(e){
+    console.warn("Supabase ping falló:", e.message);
+    return false;
+  }
+}
+
 async function loadData() {
   setStatus("Cargando datos…");
-  // Si hay credenciales Supabase, intentamos DB; si falla -> CSV local
   const hasEnv = window.env && window.env.SUPABASE_URL && window.env.SUPABASE_KEY;
+
   if (hasEnv) {
     try {
       const supa = window.supabase.createClient(window.env.SUPABASE_URL, window.env.SUPABASE_KEY);
-      // Ajusta NOMBRE DE TABLA/columnas si difiere
+      const ok = await pingSupabase(supa);
+      if (!ok) throw new Error("No se pudo leer la tabla. Revisa: nombre de tabla 'instituciones', columnas (amie,nombre,tipo,sostenimiento,provincia,canton,parroquia,lat,lon) y reglas RLS.");
+
       const { data, error } = await supa
         .from("instituciones")
         .select("amie,nombre,tipo,sostenimiento,provincia,canton,parroquia,lat,lon")
         .limit(50000);
       if (error) throw error;
-      state.data = (data || []).filter(d => d.lat && d.lon);
+
+      state.data = (data || []).filter(d => isFinite(d.lat) && isFinite(d.lon));
       setStatus(`Datos desde Supabase: ${state.data.length}`);
       return;
     } catch (e) {
-      console.warn("Supabase falló, uso CSV:", e.message);
+      console.warn("Lectura Supabase falló, usando CSV local:", e.message);
+      setStatus("Supabase no disponible, usando CSV local…");
     }
+  } else {
+    console.warn("ENV Supabase no definido (window.env). Usaré CSV.");
+    setStatus("Sin credenciales, usando CSV local…");
   }
 
   // Fallback CSV local
@@ -47,8 +58,7 @@ async function loadData() {
   const res = await fetch(csvUrl);
   const text = await res.text();
   const parsed = Papa.parse(text, { header: true, dynamicTyping: true });
-  state.data = parsed.data
-    .map(r => ({
+  state.data = parsed.data.map(r => ({
       amie: r.amie || r.AMIE || r.amie_code,
       nombre: r.nombre || r.NOMBRE,
       tipo: r.tipo || r.TIPO,
@@ -63,11 +73,9 @@ async function loadData() {
   setStatus(`Datos desde CSV: ${state.data.length}`);
 }
 
-/* ------------------ Mapa ------------------ */
 let map;
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([-1.83, -78.18], 6);
-
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18, attribution: "&copy; OpenStreetMap"
   }).addTo(map);
@@ -80,7 +88,6 @@ function initMap() {
   });
 }
 
-/* Render de marcadores en el cluster */
 function renderMarkers(rows) {
   state.mcg.clearLayers();
   rows.forEach(r => {
@@ -95,21 +102,8 @@ function renderMarkers(rows) {
   });
 }
 
-/* ------------------ Filtros y Búsqueda ------------------ */
 function distinct(arr, key) {
   return [...new Set(arr.map(x => (x[key] ?? "")).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
-}
-function fillFilters() {
-  const d = state.data;
-  fillSelect("#f-provincia", ["Provincia", ...distinct(d,"provincia")]);
-  fillSelect("#f-sosten", ["Sostenimiento", ...distinct(d,"sostenimiento")]);
-  fillSelect("#f-tipo", ["Tipo", ...distinct(d,"tipo")]);
-
-  $("#f-provincia").addEventListener("change", onProvincia);
-  $("#f-canton").addEventListener("change", onCanton);
-  $("#f-parroquia").addEventListener("change", () => emit("filters-change"));
-  $("#f-sosten").addEventListener("change", () => emit("filters-change"));
-  $("#f-tipo").addEventListener("change", () => emit("filters-change"));
 }
 function fillSelect(sel, opts) {
   const el = $(sel); el.innerHTML = "";
@@ -119,11 +113,21 @@ function fillSelect(sel, opts) {
     el.appendChild(o);
   });
 }
+function fillFilters() {
+  const d = state.data;
+  fillSelect("#f-provincia", ["Provincia", ...distinct(d,"provincia")]);
+  fillSelect("#f-sosten", ["Sostenimiento", ...distinct(d,"sostenimiento")]);
+  fillSelect("#f-tipo", ["Tipo", ...distinct(d,"tipo")]);
+  $("#f-provincia").addEventListener("change", onProvincia);
+  $("#f-canton").addEventListener("change", onCanton);
+  $("#f-parroquia").addEventListener("change", () => emit("filters-change"));
+  $("#f-sosten").addEventListener("change", () => emit("filters-change"));
+  $("#f-tipo").addEventListener("change", () => emit("filters-change"));
+}
 function onProvincia() {
   const prov = $("#f-provincia").value;
   const filtered = prov === "Provincia" ? state.data : state.data.filter(x => x.provincia === prov);
-  const cantones = ["Cantón", ...distinct(filtered,"canton")];
-  fillSelect("#f-canton", cantones);
+  fillSelect("#f-canton", ["Cantón", ...distinct(filtered,"canton")]);
   $("#f-canton").disabled = false;
   $("#f-parroquia").innerHTML = "<option>Parroquia</option>";
   $("#f-parroquia").disabled = true;
@@ -167,7 +171,6 @@ function applyFilters() {
   renderMarkers(rows);
 }
 
-/* ------------------ Tabla y paginación ------------------ */
 function renderTable() {
   const tbody = $("#grid tbody");
   tbody.innerHTML = "";
@@ -191,14 +194,12 @@ function renderTable() {
       <td>${r.parroquia ?? ""}</td>
     `;
     tr.addEventListener("click", () => {
-      // seleccionar/deseleccionar
+      map.setView([r.lat, r.lon], 13);
       if (state.selected.has(r.amie)) state.selected.delete(r.amie);
       else state.selected.add(r.amie);
       $("#selCount").textContent = state.selected.size;
       $("#btn-clear-selection").textContent = `Limpiar selección (${state.selected.size})`;
       tr.classList.toggle("selected");
-      // centrar mapa
-      map.setView([r.lat, r.lon], 13);
     });
     tbody.appendChild(tr);
   });
@@ -214,7 +215,6 @@ function setupPaging() {
   });
 }
 
-/* ------------------ Búsqueda y limpieza ------------------ */
 function setupSearch() {
   $("#btn-buscar").addEventListener("click", applyFilters);
   $("#btn-limpiar").addEventListener("click", () => {
@@ -238,9 +238,8 @@ function setupSearch() {
   });
 }
 
-/* ------------------ Panel Transformación (17S / 18S) ------------------ */
+/* Transformación 17S/18S */
 function setupTransformPanel() {
-  // Captura clic para cargar lat/lon
   map.on("click", (e) => {
     $("#tp-lat").value = e.latlng.lat.toFixed(6);
     $("#tp-lon").value = e.latlng.lng.toFixed(6);
@@ -257,46 +256,37 @@ function setupTransformPanel() {
     if (isFinite(lat) && isFinite(lon)) pin = L.marker([lat, lon]).addTo(map);
   });
   $("#tp-btn-copy").addEventListener("click", async () => {
-    const lat = $("#tp-lat").value, lon = $("#tp-lon").value;
-    try {
-      await navigator.clipboard.writeText(`${lat}, ${lon}`);
-      setStatus("Coordenadas copiadas");
-    } catch { setStatus("No se pudo copiar"); }
+    try { await navigator.clipboard.writeText(`${$("#tp-lat").value}, ${$("#tp-lon").value}`); setStatus("Coordenadas copiadas"); }
+    catch { setStatus("No se pudo copiar"); }
   });
 
-  // Config Proj4 UTM 17S y 18S
   const EPSG32717 = "+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs";
   const EPSG32718 = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs +type=crs";
 
   function ddToUTM() {
     const lat = parseFloat($("#tp-lat").value), lon = parseFloat($("#tp-lon").value);
     if (!isFinite(lat) || !isFinite(lon)) return;
-
     const p = proj4("EPSG:4326", EPSG32717, [lon, lat]);
-    $("#tp-utm-e-17").value = p[0].toFixed(2);
-    $("#tp-utm-n-17").value = p[1].toFixed(2);
-
+    $("#tp-utm-e-17").value = p[0].toFixed(2); $("#tp-utm-n-17").value = p[1].toFixed(2);
     const p18 = proj4("EPSG:4326", EPSG32718, [lon, lat]);
-    $("#tp-utm-e-18").value = p18[0].toFixed(2);
-    $("#tp-utm-n-18").value = p18[1].toFixed(2);
+    $("#tp-utm-e-18").value = p18[0].toFixed(2); $("#tp-utm-n-18").value = p18[1].toFixed(2);
   }
-  // recalcular al editar DD
   $("#tp-lat").addEventListener("input", ddToUTM);
   $("#tp-lon").addEventListener("input", ddToUTM);
 }
 
-/* ------------------ Wiring de eventos ------------------ */
+/* Eventos */
 bus.addEventListener("filters-change", () => applyFilters());
 bus.addEventListener("page-change", () => renderTable());
 
-/* ------------------ Init ------------------ */
+/* Init */
 (async function main(){
   initMap();
   setupPaging();
   setupSearch();
   await loadData();
   fillFilters();
-  state.view = state.data.slice();   // vista inicial
+  state.view = state.data.slice();
   renderMarkers(state.view);
   emit("page-change");
   setupTransformPanel();
