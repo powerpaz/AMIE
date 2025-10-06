@@ -1,4 +1,4 @@
-/* Geoportal IE — App (Supabase diag + toggle tabla sincronizado + centrado + basemaps + overlay) */
+/* Geoportal IE — App (Supabase diag + toggle tabla sincronizado + laterales + basemaps + overlay) */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const setStatus = (t) => ($("#status").textContent = t);
@@ -128,7 +128,7 @@ async function loadFromCSV(){
   }
 }
 
-/* ---------- Mapa (OSM + Satélite + WorldStreet + Positron + Overlay rótulos) ---------- */
+/* ---------- Mapa (OSM + Satélite + Street + Positron + Overlay) ---------- */
 let map;
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([-1.83, -78.18], 6);
@@ -143,15 +143,13 @@ function initMap() {
     maxZoom: 19, attribution: "Tiles &copy; Esri WorldStreetMap"
   });
   const cartoPositron = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 19, subdomains: "abcd",
-    attribution: "&copy; CartoDB, OpenStreetMap"
+    maxZoom: 19, subdomains: "abcd", attribution: "&copy; CartoDB, OpenStreetMap"
   });
   const esriLabels = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
     { maxZoom: 19, attribution: "Labels & Boundaries &copy; Esri", pane: "overlayPane" }
   );
 
-  // Base por defecto
   osm.addTo(map);
 
   state.baseLayers = {
