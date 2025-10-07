@@ -1,5 +1,4 @@
-
-// Medir Distancia — Leaflet control (no cambia colores ni estructuras Supabase)
+// Medir Distancia — Leaflet control (SVG minimal + atajos)
 // Uso: llamar initMeasure(map) después de crear el mapa.
 (function(global){
   function formatMeters(m){
@@ -10,7 +9,6 @@
   function initMeasure(map){
     if (!map) return;
 
-    // Estado interno
     let active = false;
     let points = [];
     let line = L.polyline([], {weight: 3, opacity: 0.9}).addTo(map);
@@ -28,7 +26,7 @@
 
     function update(){
       line.setLatLngs(points);
-      if (tooltip){
+      if (tooltip && points.length){
         const d = totalDistance();
         tooltip.setLatLng(points[points.length-1]);
         tooltip.setContent(`<div style="padding:4px 6px;font-size:12px"><b>Total:</b> ${formatMeters(d)}</div>`);
@@ -43,23 +41,9 @@
       if (tooltip){ map.removeLayer(tooltip); tooltip = null; }
     }
 
-    function toggleActive(){
-      if (!active){
-        active = true;
-        ctrlEl.classList.add('is-on');
-        row.style.display = 'block';
-        map.getContainer().style.cursor = 'crosshair';
-        clearAll();
-        map.on('click', onClick);
-        map.on('mousemove', onMove);
-      } else {
-        row.style.display = 'none';
-        finish();
-      }
-    }
     function finish(){
       active = false;
-      ctrlEl.classList.remove('is-on');
+      if (ctrlEl) ctrlEl.classList.remove('is-on');
       map.getContainer().style.cursor = '';
       map.off('click', onClick);
       map.off('mousemove', onMove);
@@ -93,20 +77,34 @@
       }
     }
 
-    // Botón de control
+    function toggleActive(){
+      if (!active){
+        active = true;
+        if (ctrlEl) ctrlEl.classList.add('is-on');
+        const r = document.querySelector('.measure-ctrl .measure-row');
+        if (r) r.style.display = 'block';
+        clearAll();
+        map.getContainer().style.cursor = 'crosshair';
+        map.on('click', onClick);
+        map.on('mousemove', onMove);
+      } else {
+        const r = document.querySelector('.measure-ctrl .measure-row');
+        if (r) r.style.display = 'none';
+        finish();
+      }
+    }
+
     const MeasureControl = L.Control.extend({
       options: { position: 'topleft' },
       onAdd: function () {
         const container = L.DomUtil.create('div', 'leaflet-bar measure-ctrl');
+        ctrlEl = container;
         const btn = L.DomUtil.create('a', '', container);
         btn.href = '#';
         btn.title = 'Medir distancia';
+
+        // Icono SVG minimal (regla inclinada)
         btn.innerHTML = `<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-label='Medir distancia'><path d='M3 21l18-18'/><path d='M14 7l3 3'/><path d='M11 10l3 3'/><path d='M8 13l3 3'/><path d='M5 16l3 3'/></svg>`;
-        btn.style.fontSize = '18px';
-        btn.style.lineHeight = '28px';
-        btn.style.textAlign = 'center';
-        btn.style.width = '28px';
-        btn.style.height = '28px';
 
         const row = L.DomUtil.create('div', 'measure-row', container);
         row.style.display = 'none';
@@ -115,13 +113,11 @@
         row.style.backdropFilter = 'blur(6px)';
         row.style.borderRadius = '8px';
         row.style.marginTop = '6px';
-
         const info = L.DomUtil.create('span', '', row);
         info.textContent = 'Click para puntos • ESC cancelar • DblClick terminar';
         info.style.fontSize = '11px';
         info.style.color = '#fff';
         info.style.marginRight = '8px';
-
         const clearBtn = L.DomUtil.create('button', '', row);
         clearBtn.textContent = 'Limpiar';
         clearBtn.style.fontSize = '12px';
@@ -134,36 +130,13 @@
 
         L.DomEvent.disableClickPropagation(container);
 
-        btn.addEventListener('click', (ev)=>{
-          ev.preventDefault();
-          toggleActive();
-            active = true;
-            ctrlEl = container;
-            container.classList.add('is-on');
-            row.style.display = 'block';
-            map.getContainer().style.cursor = 'crosshair';
-            clearAll();
-            map.on('click', onClick);
-            map.on('mousemove', onMove);
-        });
+        btn.addEventListener('click', (ev)=>{ ev.preventDefault(); toggleActive(); });
+        clearBtn.addEventListener('click', ()=>{ clearAll(); update(); });
 
-        clearBtn.addEventListener('click', ()=>{
-          clearAll();
-          update();
-        });
-
-        map.on('dblclick', ()=>{
-          if (active){
-            finish();
-          }
-        });
-
+        map.on('dblclick', ()=>{ if (active){ finish(); } });
         window.addEventListener('keydown', (e)=>{
           if (e.key && e.key.toLowerCase() === 'm') { e.preventDefault(); toggleActive(); return; }
-          if (active && e.key === 'Escape'){
-            clearAll();
-            finish();
-          }
+          if (active && e.key === 'Escape'){ clearAll(); finish(); }
         });
 
         return container;
@@ -172,6 +145,6 @@
     map.addControl(new MeasureControl());
   }
 
-  // Exponer
   global.initMeasure = initMeasure;
 })(window);
+
