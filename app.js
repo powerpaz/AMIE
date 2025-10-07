@@ -373,35 +373,68 @@ function setupTransformPanel() {
     $("#tp-lon").value = e.latlng.lng.toFixed(6);
     ddToUTM();
   });
+
   $("#tp-btn-center").addEventListener("click", () => {
-    const lat = parseFloat($("#tp-lat").value), lon = parseFloat($("#tp-lon").value);
+    const lat = parseFloat($("#tp-lat").value),
+          lon = parseFloat($("#tp-lon").value);
     if (isFinite(lat) && isFinite(lon)) map.setView([lat, lon], 15);
   });
+
+  // --- NUEVO: ícono cruz roja
+  const crossIcon = L.divIcon({
+    className: 'cross-pin',
+    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                width="18" height="18" stroke="red" stroke-width="3" fill="none"
+                stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 12h16M12 4v16"/>
+           </svg>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
+
   let pin;
   $("#tp-btn-pin").addEventListener("click", () => {
-    if (pin) { map.removeLayer(pin); pin = null; return; }
-    const lat = parseFloat($("#tp-lat").value), lon = parseFloat($("#tp-lon").value);
-    if (isFinite(lat) && isFinite(lon)) pin = L.marker([lat, lon]).addTo(map);
+    // Si ya hay un pin, lo quitamos antes de poner otro
+    if (pin) { map.removeLayer(pin); pin = null; }
+    const lat = parseFloat($("#tp-lat").value),
+          lon = parseFloat($("#tp-lon").value);
+    if (isFinite(lat) && isFinite(lon)) {
+      pin = L.marker([lat, lon], { icon: crossIcon }).addTo(map);
+    }
   });
+
   $("#tp-btn-copy").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(`${$("#tp-lat").value}, ${$("#tp-lon").value}`); setStatus("Coordenadas copiadas"); }
-    catch { setStatus("No se pudo copiar"); }
+    const txt = [
+      `Lat, Lon (DD): ${$("#tp-lat").value}, ${$("#tp-lon").value}`,
+      `UTM 17S: Este ${$("#tp-utm-e-17").value}, Norte ${$("#tp-utm-n-17").value}`,
+      `UTM 18S: Este ${$("#tp-utm-e-18").value}, Norte ${$("#tp-utm-n-18").value}`
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(txt);
+      setStatus("Coordenadas copiadas");
+    } catch {
+      setStatus("No se pudo copiar");
+    }
   });
 
   const EPSG32717 = "+proj=utm +zone=17 +south +datum=WGS84 +units=m +no_defs +type=crs";
   const EPSG32718 = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs +type=crs";
 
   function ddToUTM() {
-    const lat = parseFloat($("#tp-lat").value), lon = parseFloat($("#tp-lon").value);
+    const lat = parseFloat($("#tp-lat").value),
+          lon = parseFloat($("#tp-lon").value);
     if (!isFinite(lat) || !isFinite(lon)) return;
-    const p = proj4("EPSG:4326", EPSG32717, [lon, lat]);
-    $("#tp-utm-e-17").value = p[0].toFixed(2); $("#tp-utm-n-17").value = p[1].toFixed(2);
+    const p17 = proj4("EPSG:4326", EPSG32717, [lon, lat]);
+    $("#tp-utm-e-17").value = p17[0].toFixed(2);
+    $("#tp-utm-n-17").value = p17[1].toFixed(2);
     const p18 = proj4("EPSG:4326", EPSG32718, [lon, lat]);
-    $("#tp-utm-e-18").value = p18[0].toFixed(2); $("#tp-utm-n-18").value = p18[1].toFixed(2);
+    $("#tp-utm-e-18").value = p18[0].toFixed(2);
+    $("#tp-utm-n-18").value = p18[1].toFixed(2);
   }
   $("#tp-lat").addEventListener("input", ddToUTM);
   $("#tp-lon").addEventListener("input", ddToUTM);
 }
+
 
 /* ---------- Toggle tabla (dos botones sincronizados) ---------- */
 (function setupTableToggle(){
