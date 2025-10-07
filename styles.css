@@ -123,6 +123,3 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 /* SVG icon size for measure button */
 .measure-ctrl a svg{ width:16px; height:16px; }
 
-/* Cruz roja para el pin de "Fijar punto" */
-.cross-pin { filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
-.cross-pin svg { display:block; }
