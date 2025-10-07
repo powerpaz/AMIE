@@ -1,4 +1,4 @@
-/* Geoportal IE — App (Supabase diag + toggle tabla sincronizado + laterales + basemaps + overlay) */
+/* Geoportal IE — App (Supabase diag + toggle tabla + laterales + basemaps + overlay + GEOCODER) */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 const setStatus = (t) => ($("#status").textContent = t);
@@ -14,7 +14,8 @@ const state = {
   mcg: null,
   debug: new URLSearchParams(location.search).get("debug") === "1",
   baseLayers: {},
-  overlays: {}
+  overlays: {},
+  geoMarker: null
 };
 
 function diag(msg, obj){
@@ -59,7 +60,6 @@ async function readInstituciones(supa){
     lat:         pick(["lat","latitud","latitude","y"]),
     lon:         pick(["lon","long","longitud","longitude","x"]),
   };
-  if (state.debug) console.table(mapCols);
 
   if (!mapCols.lat || !mapCols.lon) throw new Error("No se detectaron columnas lat/lon.");
 
@@ -128,7 +128,7 @@ async function loadFromCSV(){
   }
 }
 
-/* ---------- Mapa (OSM + Satélite + Street + Positron + Overlay) ---------- */
+/* ---------- Mapa (bases + overlay + geocoder) ---------- */
 let map;
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([-1.83, -78.18], 6);
@@ -160,7 +160,36 @@ function initMap() {
   };
   state.overlays = { "Rótulos (Esri)": esriLabels };
 
-  L.control.layers(state.baseLayers, state.overlays, { position: "topleft", collapsed: true }).addTo(map);
+  // Control de capas: abajo-izquierda (bajo calculadora)
+  L.control.layers(state.baseLayers, state.overlays, { position: "bottomleft", collapsed: true }).addTo(map);
+
+  // Geocoder (arriba-izquierda, bajo filtros)
+  const ecViewBox = "-92.3,-5.5,-75.0,2.0"; // [minLon,minLat,maxLon,maxLat] aprox. Ecuador+Galápagos
+  const geocoder = L.Control.geocoder({
+    placeholder: "Buscar dirección…",
+    collapsed: false,
+    defaultMarkGeocode: false,
+    geocoder: L.Control.Geocoder.nominatim({
+      geocodingQueryParams: {
+        countrycodes: "ec",
+        viewbox: ecViewBox,
+        bounded: 1,
+        addressdetails: 1
+      }
+    })
+  })
+  .on("markgeocode", (e) => {
+    const { center, name, bbox } = e.geocode;
+    if (state.geoMarker) map.removeLayer(state.geoMarker);
+    state.geoMarker = L.marker(center).addTo(map).bindPopup(`<strong>${name}</strong>`).openPopup();
+    if (bbox) {
+      const b = L.latLngBounds(bbox);
+      map.fitBounds(b.pad(0.1));
+    } else {
+      map.setView(center, 16);
+    }
+  })
+  .addTo(map);
 
   // Cluster
   state.mcg = L.markerClusterGroup();
