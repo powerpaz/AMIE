@@ -38,9 +38,7 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
   border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden
 }
-.panel.right{
-  right:28px; top:110px; bottom:98px; width:420px;
-}
+.panel.right{ right:28px; top:110px; bottom:98px; width:420px; }
 .panel.hidden{display:none;}
 .panel-head,.panel-foot{padding:10px 12px;background:#0f1a28;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .panel-foot{border-top:1px solid var(--border);border-bottom:none;margin-top:auto}
@@ -57,11 +55,11 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .hud{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:10px;z-index:540}
 .chip{background:var(--surface);color:var(--ink);border:1px solid rgba(0,0,0,.08);padding:9px 12px;border-radius:14px;box-shadow:0 8px 18px rgba(0,0,0,.2)}
 
-/* Transform Panel (izquierda, simétrica con la tabla; tipografía reducida) */
+/* Transform Panel (izquierda; simétrico con la tabla; tipografía reducida) */
 .transform-panel{
   position:absolute;
-  left:28px; top:110px; bottom:98px; width:460px;     /* simetría en top/bottom */
-  max-width:46vw; max-height:none; overflow:auto;
+  left:28px; top:110px; bottom:98px; width:460px;
+  max-width:46vw; overflow:auto;
   background:rgba(15,22,32,.96); border:1px solid var(--border);
   border-radius:14px; box-shadow:var(--shadow); z-index:540; color:#e8f1ff;
   backdrop-filter:blur(6px); font-size:12.5px;
@@ -70,10 +68,10 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .tp-actions{display:flex;gap:6px}
 .tp-body{padding:10px}
 .tp-row{margin-bottom:8px}
-.tp-row label{display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+.tp-row label{display:block;font-size:12px;color:#b9c4d1;margin-bottom:6px}
 .tp-grid{display:grid;gap:8px}
 .tp-grid.tp-2{grid-template-columns:1fr 1fr}
-.tp-grid.tp-6{grid-template-columns:repeat(3,minmax(0,1fr))} /* 3 columnas */
+.tp-grid.tp-6{grid-template-columns:repeat(3,minmax(0,1fr))}
 .tp-grid.tp-utm{grid-template-columns:84px 68px 1fr 1fr}
 .transform-panel input,.transform-panel select{
   background:#111a25;border:1px solid rgba(255,255,255,.18);color:#e8f1ff;
@@ -82,16 +80,40 @@ body{margin:0;background:linear-gradient(180deg,#10151b 0%, #0e1620 100%);color:
 .tp-hint small{color:#b9c4d1}
 
 /* Leaflet placements */
-.leaflet-top.leaflet-left{top:88px!important}
-.leaflet-control-layers,.leaflet-control-zoom{z-index:5000}
+.leaflet-top.leaflet-left{top:88px!important} /* controles top-left bajo filtros */
+.leaflet-bottom.leaflet-left{
+  left:28px!important; bottom:24px!important; z-index:5000; /* capas abajo-izquierda */
+}
+
+/* Geocoder oscuro */
+.leaflet-control-geocoder{
+  background:#0f1a28!important; color:#e8f1ff!important;
+  border:1px solid var(--border)!important; border-radius:12px!important;
+  box-shadow:var(--shadow)!important;
+}
+.leaflet-control-geocoder-form input{
+  background:#111a25!important; color:#e8f1ff!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  border-radius:10px!important; padding:8px 10px!important; width:260px!important;
+}
+.leaflet-control-geocoder-alternatives{
+  background:#0f1a28!important; color:#e8f1ff!important;
+  border-top:1px solid var(--border)!important;
+}
+.leaflet-control-geocoder-alternatives li{
+  border-bottom:1px solid rgba(255,255,255,.08)!important;
+}
+.leaflet-control-geocoder-icon{
+  filter:invert(1) brightness(1.4); /* icono claro en tema oscuro */
+}
 
 /* Responsive */
 @media (max-width:1200px){
-  .transform-panel{left:16px; right:auto; width:44vw}
+  .transform-panel{left:16px; width:44vw}
   .panel.right{right:16px}
 }
 @media (max-width:900px){
-  /* En pantallas chicas dejamos paneles apilados, pero siguen alineando fondo */
   .transform-panel{top:auto; width:92vw; left:50%; transform:translateX(-50%); bottom:98px}
   .panel.right{width:92vw; right:4vw; left:4vw}
 }
+
