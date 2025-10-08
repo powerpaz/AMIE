@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Geoportal — IE Ecuador</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Supabase v2 UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+  <!-- Proj4 -->
+  <script src="https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/proj4leaflet@1.0.2/src/proj4leaflet.min.js"></script>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="styles.css?v=11" />
+
+  <!-- ENV -->
+  <script>
+    window.env = window.env || {
+      SUPABASE_URL: "https://krjwqagkjuzrpxianvnu.supabase.co",
+      SUPABASE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyandxYWdranV6cnB4aWFudm51Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDY4NjEsImV4cCI6MjA3NDMyMjg2MX0.vdIMVgAciBhAweV4CGjEXq-fuo2xRm0qSssl4JhoErQ"
+    };
+  </script>
+</head>
+<body>
+  <!-- Barra superior -->
+  <div class="nav">
+    <div class="brand">
+      <span class="dot"></span>
+      <span>Geoportal — IE Ecuador</span>
+    </div>
+
+    <!-- Logo institucional -->
+    <img src="logo.png" alt="Ministerio de Educación, Deporte y Cultura" class="nav-logo" />
+
+    <div class="searchbar">
+      <input id="q-amie" placeholder="Buscar AMIE..." />
+      <input id="q-nombre" placeholder="Buscar nombre..." />
+      <button id="btn-buscar" class="btn primary">Buscar</button>
+      <button id="btn-limpiar" class="btn ghost">Limpiar</button>
+      <!-- Botón global: Ocultar/Mostrar tabla -->
+      <button id="btn-toggle-table" class="btn ghost" title="Ocultar/mostrar tabla">Ocultar tabla</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <!-- MAPA -->
+    <div id="map" aria-label="Mapa"></div>
+
+    <!-- Filtros -->
+    <div class="pill filters">
+      <select id="f-provincia"><option>Provincia</option></select>
+      <select id="f-canton" disabled><option>Cantón</option></select>
+      <select id="f-parroquia" disabled><option>Parroquia</option></select>
+      <select id="f-sosten"><option>Sostenimiento</option></select>
+      <select id="f-tipo"><option>Tipo</option></select>
+    </div>
+
+    <!-- Panel Listado (tabla a la derecha) -->
+    <div class="panel right" id="panel-tabla">
+      <div class="panel-head">
+        <strong>Listado</strong>
+        <div class="panel-controls">
+          <button id="btn-toggle-table-inner" class="btn sm ghost" title="Ocultar/mostrar tabla">Ocultar</button>
+          <div class="pager">
+            <button id="pg-prev" class="btn sm ghost">◀</button>
+            <span id="pg-now">1</span>/<span id="pg-total">1</span>
+            <select id="pg-size" class="btn sm">
+              <option>25</option><option>50</option><option>100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="grid">
+          <thead><tr>
+            <th>AMIE</th><th>Nombre</th><th>Tipo</th><th>Sostenimiento</th>
+            <th>Provincia</th><th>Cantón</th><th>Parroquia</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="panel-foot">
+        <button id="btn-clear-selection" class="btn ghost">Limpiar selección (0)</button>
+      </div>
+    </div>
+
+    <!-- HUD inferior -->
+    <div class="hud">
+      <div class="chip">Estado: <span id="status">Inicializando…</span></div>
+      <div class="chip">Cursor: <span id="cursor">--</span></div>
+      <div class="chip">Selección: <span id="selCount">0</span></div>
+    </div>
+
+    <!-- Panel Transformación (calculadora a la izquierda) -->
+    <div class="transform-panel left" id="transform-panel">
+      <div class="tp-head">
+        <strong>Transformación</strong>
+        <div class="tp-actions">
+          <button class="btn sm ghost" id="tp-btn-center">Ir</button>
+          <button class="btn sm ghost" id="tp-btn-pin">Fijar punto</button>
+          <button class="btn sm ghost" id="tp-btn-copy">Copiar</button>
+        </div>
+      </div>
+      <div class="tp-body">
+        <div class="tp-row">
+          <label>Lat, Lon (DD)</label>
+          <div class="tp-grid tp-2">
+            <input id="tp-lat" placeholder="-1.831" />
+            <input id="tp-lon" placeholder="-78.183" />
+          </div>
+        </div>
+
+        <div class="tp-row">
+          <label>DMS</label>
+          <div class="tp-grid tp-6">
+            <input id="tp-lat-d" placeholder="Lat °" />
+            <input id="tp-lat-m" placeholder="Lat ′" />
+            <input id="tp-lat-s" placeholder="Lat ″" />
+            <input id="tp-lon-d" placeholder="Lon °" />
+            <input id="tp-lon-m" placeholder="Lon ′" />
+            <input id="tp-lon-s" placeholder="Lon ″" />
+          </div>
+        </div>
+
+        <div class="tp-row">
+          <label>UTM (17S — principal)</label>
+          <div class="tp-grid tp-utm">
+            <input id="tp-utm-zone-17" value="17" disabled />
+            <select id="tp-utm-hem-17" disabled>
+              <option value="S" selected>S</option><option value="N">N</option>
+            </select>
+            <input id="tp-utm-e-17" placeholder="Este (E) 17S" />
+            <input id="tp-utm-n-17" placeholder="Norte (N) 17S" />
+          </div>
+        </div>
+
+        <div class="tp-row">
+          <label>UTM (18S — alterna)</label>
+          <div class="tp-grid tp-utm">
+            <input id="tp-utm-zone-18" value="18" disabled />
+            <select id="tp-utm-hem-18" disabled>
+              <option value="S" selected>S</option><option value="N">N</option>
+            </select>
+            <input id="tp-utm-e-18" placeholder="Este (E) 18S" />
+            <input id="tp-utm-n-18" placeholder="Norte (N) 18S" />
+          </div>
+        </div>
+
+        <div class="tp-row tp-hint">
+          <small>Tip: clic en el mapa para capturar Lat/Lon. “Ir” centra; “Fijar punto” deja marcador.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App -->
+  <script src="app.js?v=11"></script>
+  <script src="medir-distancia.js"></script>
+  
+  <!-- ⬇️ NUEVO: cruz roja para "Fijar punto" -->
+  <link rel="stylesheet" href="cross-pin.css">
+  <script src="cross-pin.js"></script>
+
+  <!-- Basemap/Overlay Switcher (debajo de la calculadora) -->
+  <div id="basemap-switcher" class="panel card soft shadow">
+    <div class="panel-title">Mapas base & Rótulos</div>
+    <div class="switcher-group">
+      <label><input type="radio" name="basemap" value="osm" checked> OSM</label>
+      <label><input type="radio" name="basemap" value="esriSat"> Satélite (Esri)</label>
+      <label><input type="radio" name="basemap" value="esriStreet"> Esri Street</label>
+      <label><input type="radio" name="basemap" value="carto"> Carto Positron</label>
+      <label class="overlay"><input type="checkbox" id="chkLabels"> Rótulos (Esri)</label>
+    </div>
+  </div>
+
+</body>
+</html>
