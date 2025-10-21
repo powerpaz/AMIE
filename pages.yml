@@ -1,0 +1,50 @@
+name: Deploy to GitHub Pages (with CSV coordinate check)
+
+on:
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install CSV tools
+        run: npm i csv-parse@5 csv-stringify@6
+
+      - name: Validate & Normalize coordinates
+        run: node scripts/check_coords.js rubros_csv.csv rubros_csv.normalized.csv
+
+      - name: Prepare dist
+        run: |
+          mkdir -p dist
+          # Copy site files
+          cp index.html styles.css config.js app.v10.js supabaseClient.js provincias_simplificado.geojson dist/
+          # Use normalized CSV for deployment
+          cp rubros_csv.normalized.csv dist/rubros_csv.csv
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
