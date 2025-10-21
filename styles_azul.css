@@ -1,0 +1,356 @@
+/* Colores principales */
+:root {
+  --primary-dark: #0f172a;
+  --primary-blue: #0ea5e9;
+  --primary-blue-light: #06b6d4;
+  --accent-blue: #1e40af;
+  --bg-light: #f0f9ff;
+  --border-blue: #0284c7;
+  --text-dark: #1e293b;
+  --text-muted: #64748b;
+}
+
+body {
+  font-family: system-ui, Segoe UI, Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  margin: 0;
+  color: var(--text-dark);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  padding: 12px;
+}
+
+/* Panel Principal */
+aside .panel {
+  background: #ffffff;
+  border: 2px solid var(--primary-blue);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+aside .panel:hover {
+  box-shadow: 0 8px 20px rgba(14, 165, 233, 0.15);
+}
+
+/* Header del Panel */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%);
+  border-bottom: 2px solid var(--border-blue);
+}
+
+.panel-title {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.panel-header button {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.panel-header button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Contenido del Panel */
+.pad {
+  padding: 14px 16px;
+}
+
+/* Filtros */
+.filters .row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filters > div {
+  margin-bottom: 12px;
+}
+
+/* Labels */
+label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Inputs y Selects */
+input, select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e0f2fe;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--text-dark);
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Botones */
+button {
+  width: 100%;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.3);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+#btnLimpiar {
+  margin-left: 8px;
+  width: auto;
+}
+
+/* Mapa */
+#map {
+  height: 72vh;
+  border: 2px solid var(--primary-blue);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+}
+
+/* Tabla de Rubros */
+#rubrosTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+#rubrosTable thead {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%);
+  color: #ffffff;
+}
+
+#rubrosTable th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+}
+
+#rubrosTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e0f2fe;
+  color: var(--text-dark);
+}
+
+#rubrosTable tbody tr:hover {
+  background: #f0f9ff;
+  transition: background 0.2s ease;
+}
+
+#rubrosTable tfoot {
+  background: #f8fafc;
+  font-weight: 700;
+  color: var(--accent-blue);
+  border-top: 2px solid var(--primary-blue);
+}
+
+#rubrosTable tfoot td {
+  padding: 12px;
+}
+
+/* Texto Muted */
+.muted {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+#countInstituciones, 
+#filtrosActivos {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border-left: 3px solid var(--primary-blue);
+  border-radius: 4px;
+}
+
+/* Status */
+.status {
+  display: inline-block;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #ffffff;
+}
+
+/* Popup */
+.popup {
+  background: #ffffff;
+  border: 1px solid var(--primary-blue);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.popup table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.popup table td {
+  padding: 6px 0;
+  border-bottom: 1px dotted #e0f2fe;
+  color: var(--text-dark);
+}
+
+.popup table td:first-child {
+  font-weight: 600;
+  color: var(--accent-blue);
+  padding-right: 10px;
+}
+
+/* Leaflet Controls */
+.leaflet-control-attribution {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.leaflet-control-zoom {
+  border: 2px solid var(--primary-blue) !important;
+  border-radius: 8px !important;
+}
+
+.leaflet-control-zoom a {
+  background: #ffffff !important;
+  color: var(--primary-blue) !important;
+  border-radius: 6px !important;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
+}
+
+/* Markers */
+.leaflet-marker-icon {
+  filter: hue-rotate(200deg) saturate(1.2);
+}
+
+/* Cluster */
+.marker-cluster {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-light) 100%) !important;
+  border: 2px solid var(--accent-blue) !important;
+}
+
+.marker-cluster div {
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--primary-blue) 100%) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  #map {
+    height: 50vh;
+  }
+
+  .filters .row {
+    grid-template-columns: 1fr;
+  }
+
+  aside .panel {
+    margin-bottom: 8px;
+  }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.panel {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Scrollbar personalizado */
+aside {
+  overflow-y: auto;
+  max-height: calc(100vh - 24px);
+}
+
+aside::-webkit-scrollbar {
+  width: 8px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: #f0f9ff;
+}
+
+aside::-webkit-scrollbar-thumb {
+  background: var(--primary-blue);
+  border-radius: 4px;
+}
+
+aside::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-blue);
+}
