@@ -14,19 +14,28 @@ body {
   grid-template-columns: 360px 1fr;
   gap: 16px;
   padding: 12px;
+  height: 100vh;
 }
 
 /* ==============================================
    PANELES
    ============================================== */
 
+aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: calc(100vh - 24px);
+}
+
 aside .panel {
   background: #ffffff;
   border: 2px solid #0ea5e9;
   border-radius: 12px;
-  margin-bottom: 12px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
+  flex-shrink: 0;
 }
 
 .panel-header {
@@ -62,6 +71,8 @@ aside .panel {
 
 .pad {
   padding: 12px 14px;
+  overflow-y: auto;
+  max-height: 400px;
 }
 
 /* ==============================================
@@ -146,15 +157,24 @@ button:active {
 }
 
 /* ==============================================
-   MAPA
+   MAPA - MÁS GRANDE
    ============================================== */
 
+main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 #map {
-  height: 72vh;
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
   border: 2px solid #0ea5e9;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(14, 165, 233, 0.1);
   overflow: hidden;
+  flex: 1;
 }
 
 /* ==============================================
@@ -303,25 +323,29 @@ button:active {
 @media (max-width: 768px) {
   .layout {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   #map {
-    height: 50vh;
+    height: 60vh;
   }
 
   .filters .row {
     grid-template-columns: 1fr;
+  }
+
+  aside {
+    max-height: none;
+  }
+
+  .pad {
+    max-height: none;
   }
 }
 
 /* ==============================================
    SCROLLBAR
    ============================================== */
-
-aside {
-  overflow-y: auto;
-  max-height: calc(100vh - 24px);
-}
 
 aside::-webkit-scrollbar {
   width: 6px;
@@ -337,5 +361,22 @@ aside::-webkit-scrollbar-thumb {
 }
 
 aside::-webkit-scrollbar-thumb:hover {
+  background: #1e40af;
+}
+
+.pad::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pad::-webkit-scrollbar-track {
+  background: #f0f9ff;
+}
+
+.pad::-webkit-scrollbar-thumb {
+  background: #0ea5e9;
+  border-radius: 3px;
+}
+
+.pad::-webkit-scrollbar-thumb:hover {
   background: #1e40af;
 }
