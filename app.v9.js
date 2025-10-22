@@ -26,6 +26,7 @@ function get(row, aliases){
   }
   return undefined;
 }
+
 function parseNum(v){
   if(v===undefined||v===null||v==='') return undefined;
   let s = String(v).trim();
@@ -38,13 +39,16 @@ function parseNum(v){
   const num = Number(s);
   return Number.isFinite(num)?num:undefined;
 }
+
 function currency(v){ return (Number.isFinite(v)? v:0).toLocaleString('es-EC',{style:'currency',currency:'USD'}); }
+
 function regimeColor(r){
   const R = (r??'').toString().toUpperCase();
   if(R==='COSTA') return '#d40000';
   if(R==='SIERRA') return '#f4d03f';
   return '#6b7280';
 }
+
 function zoneKey(z){ const m = /(\d+)/.exec(z||''); return m?parseInt(m[1],10):999; }
 
 async function init(){
@@ -105,11 +109,11 @@ async function loadFromCSV(){
 function setupFilters(){
   const provSet = new Set(), cantSet = new Set(), zonaSet = new Set(), nivelSet = new Set(), anioSet = new Set();
   rawRows.forEach(row=>{
-    const prov = get(row,['PROVINCIA']);
-    const cant = get(row,['CANTON','CANTÓN']);
-    const zona = get(row,['ZONA']);
-    const nivel = get(row,['NIVEL DE EDUCACIÓN','NIVEL DE EDUCACION','NIVEL_DE_EDUCACION']);
-    const anio = get(row,['AUX_AÑO DE DOTACIÓN','AUX_ANIO_DOTACION','AUX_ANIO DE DOTACION']);
+    const prov = get(row,['provincia','PROVINCIA']);
+    const cant = get(row,['canton','CANTON','cantón','CANTÓN']);
+    const zona = get(row,['zona','ZONA']);
+    const nivel = get(row,['nivel_educacion','NIVEL DE EDUCACION','NIVEL_DE_EDUCACION','nivel de educación']);
+    const anio = get(row,['aux_año_dotacion','AUX_AÑO_DOTACION','aux_año de dotacion','AUX_AÑO DE DOTACIÓN']);
     if(prov) provSet.add(norm(prov));
     if(cant) cantSet.add(norm(cant));
     if(zona) zonaSet.add(norm(zona));
@@ -145,12 +149,12 @@ function rowPasses(row){
   const nivelQ = normalizeText(el('nivelSel').value);
   const anioQ = normalizeText(el('anioSel').value);
 
-  const amie = normalizeText(get(row,['AMIE']));
-  const prov = normalizeText(get(row,['PROVINCIA']));
-  const cant = normalizeText(get(row,['CANTON','CANTÓN']));
-  const zona = normalizeText(get(row,['ZONA']));
-  const nivel = normalizeText(get(row,['NIVEL DE EDUCACIÓN','NIVEL DE EDUCACION','NIVEL_DE_EDUCACION']));
-  const anio = normalizeText(get(row,['AUX_AÑO DE DOTACIÓN','AUX_ANIO_DOTACION','AUX_ANIO DE DOTACION']));
+  const amie = normalizeText(get(row,['amie','AMIE']));
+  const prov = normalizeText(get(row,['provincia','PROVINCIA']));
+  const cant = normalizeText(get(row,['canton','CANTON','cantón','CANTÓN']));
+  const zona = normalizeText(get(row,['zona','ZONA']));
+  const nivel = normalizeText(get(row,['nivel_educacion','NIVEL DE EDUCACION','NIVEL_DE_EDUCACION','nivel de educación']));
+  const anio = normalizeText(get(row,['aux_año_dotacion','AUX_AÑO_DOTACION','aux_año de dotacion','AUX_AÑO DE DOTACIÓN']));
 
   const okAmie = !amieQ || amie.includes(amieQ);
   const okProv = !provQ || prov===provQ;
@@ -185,9 +189,9 @@ function updateTable(){
     'C2: Juegos Exteriores (Equipamiento)': 0,
   };
   filteredRows.forEach(row=>{
-    const ml = parseNum(get(row,['MD_MONTO USD$','MD_MONTO_USD']));
-    const mo = parseNum(get(row,['M_MONTO USD$','M_MONTO_USD']));
-    const je = parseNum(get(row,['JE_MONTO USD$','JE_MONTO_USD']));
+    const ml = parseNum(get(row,['md_monto_usd','MD_MONTO_USD','md_monto usd$','MD_MONTO USD$']));
+    const mo = parseNum(get(row,['m_monto_usd','M_MONTO_USD','m_monto usd$','M_MONTO USD$']));
+    const je = parseNum(get(row,['je_monto_usd','JE_MONTO_USD','je_monto usd$','JE_MONTO USD$']));
     if(Number.isFinite(ml)) totals['C2: Material Lúdico (Didáctico)'] += ml;
     if(Number.isFinite(mo)) totals['C2: Mobiliario'] += mo;
     if(Number.isFinite(je)) totals['C2: Juegos Exteriores (Equipamiento)'] += je;
@@ -205,26 +209,36 @@ function updateMap(){
   if(cluster) cluster.clearLayers();
   const bounds = [];
   filteredRows.forEach(row=>{
-    const lat = parseFloat(get(row,['LATITUD']));
-    const lon = parseFloat(get(row,['LONGITUD']));
-    if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+    // AQUÍ ESTÁ LA CORRECCIÓN: buscamos ambas formas (minúsculas y mayúsculas)
+    const lat = parseFloat(get(row,['latitud','LATITUD','lat','LAT']));
+    const lon = parseFloat(get(row,['longitud','LONGITUD','lon','LON']));
+    
+    if(!Number.isFinite(lat) || !Number.isFinite(lon)){
+      console.warn('Coordenadas inválidas:', {lat, lon, row});
+      return;
+    }
 
-    const amie = get(row,['AMIE']) || '';
-    const institucion = get(row,['INSTITUCION']) || '';
-    const sosten = get(row,['SOSTENIMIENTO']) || '';
-    const nivel = get(row,['NIVEL DE EDUCACIÓN','NIVEL DE EDUCACION','NIVEL_DE_EDUCACION']) || '';
-    const auxMat = get(row,['Aux_IE_Material']) || '';
+    const amie = get(row,['amie','AMIE']) || '';
+    const institucion = get(row,['institucion','INSTITUCION']) || '';
+    const sosten = get(row,['sostenimiento','SOSTENIMIENTO']) || '';
+    const nivel = get(row,['nivel_educacion','NIVEL DE EDUCACION','NIVEL_DE_EDUCACION','nivel de educación']) || '';
+    const auxMat = get(row,['aux_ie_material','Aux_IE_Material']) || '';
 
-    const md = parseNum(get(row,['MD_MONTO USD$','MD_MONTO_USD']));
-    const m  = parseNum(get(row,['M_MONTO USD$','M_MONTO_USD']));
-    const je = parseNum(get(row,['JE_MONTO USD$','JE_MONTO_USD']));
+    const md = parseNum(get(row,['md_monto_usd','MD_MONTO_USD','md_monto usd$','MD_MONTO USD$']));
+    const m  = parseNum(get(row,['m_monto_usd','M_MONTO_USD','m_monto usd$','M_MONTO USD$']));
+    const je = parseNum(get(row,['je_monto_usd','JE_MONTO_USD','je_monto usd$','JE_MONTO USD$']));
     const sumaMontos = [md,m,je].reduce((acc,v)=>acc+(Number.isFinite(v)?v:0),0);
 
-    const regimen = get(row,['RÉGIMEN','REGIMEN']) || '';
-    const zona = get(row,['ZONA']) || '';
+    const regimen = get(row,['regimen','RÉGIMEN','REGIMEN']) || '';
+    const zona = get(row,['zona','ZONA']) || '';
 
-    const marker = L.circleMarker([lat,lon],{
-      radius:6, weight:1, color:'#111', fillColor:regimeColor(regimen), fillOpacity:0.9
+    // Crear marcador circular
+    const marker = L.circleMarker([lat, lon], {
+      radius: 6,
+      weight: 1,
+      color: '#111',
+      fillColor: regimeColor(regimen),
+      fillOpacity: 0.9
     });
 
     const rows = [
@@ -235,14 +249,19 @@ function updateMap(){
       ['Aux_IE_Material', auxMat],
       ['Suma montos (MD + M + JE)', isNaN(sumaMontos)? '—' : sumaMontos.toLocaleString('es-EC',{style:'currency',currency:'USD'})],
       ['ZONA', zona],
-      ['RÉGIMEN', regimen]
+      ['RÉGIMEN', regimen],
+      ['LATITUD', lat.toFixed(6)],
+      ['LONGITUD', lon.toFixed(6)]
     ].map(([k,v])=>`<tr><td style="color:#6b7280">${k}</td><td>${v||'—'}</td></tr>`).join('');
 
     marker.bindPopup(`<div class="popup"><h3 style="margin:0 0 6px 0">${institucion || '—'}</h3><table>${rows}</table></div>`);
     cluster.addLayer(marker);
-    bounds.push([lat,lon]);
+    bounds.push([lat, lon]);
   });
-  if(bounds.length) map.fitBounds(bounds, {padding:[16,16]});
+
+  if(bounds.length){
+    map.fitBounds(bounds, {padding:[16,16]});
+  }
 }
 
 function clearFilters(){
@@ -264,10 +283,12 @@ function exportCSV(){
       return (typeof v==='string') ? JSON.stringify(v) : v;
     }).join(','));
   });
-  const blob = new Blob([lines.join('\\n')], {type:'text/csv;charset=utf-8;'});
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'export_filtrado.csv'; a.click();
+  a.href = url;
+  a.download = 'export_filtrado.csv';
+  a.click();
   URL.revokeObjectURL(url);
 }
 
