@@ -9,12 +9,9 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" crossorigin="anonymous"/>
   <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
   <script defer src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" crossorigin="anonymous"></script>
-  <script defer src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="styles.css"/>
   <script defer src="config.js"></script>
-  <!-- COMENTADO: supabaseClient no es necesario para CSV -->
-  <!-- <script type="module" defer src="supabaseClient.js"></script> -->
-  <script type="module" defer src="app.v9.js?v=9"></script>
+  <script defer src="app.v9.js?v=11"></script>
 </head>
 <body>
   <div class="layout">
@@ -33,7 +30,7 @@
             <div class="row">
               <div>
                 <label for="provSel">PROVINCIA</label>
-                <select id="provSel"><option value="">Todas</option></select>
+                <select id="provSel"><option value="">Todos</option></select>
               </div>
               <div>
                 <label for="cantSel">CANTÓN</label>
@@ -43,7 +40,7 @@
             <div class="row">
               <div>
                 <label for="zonaSel">ZONA</label>
-                <select id="zonaSel"><option value="">Todas</option></select>
+                <select id="zonaSel"><option value="">Todos</option></select>
               </div>
               <div>
                 <label for="nivelSel">NIVEL DE EDUCACIÓN</label>
@@ -59,7 +56,7 @@
                 <button id="btnLimpiar" style="margin-left:8px">Limpiar</button>
               </div>
             </div>
-            <div style="margin-top:8px" class="muted">Fuente: <span id="srcLabel">—</span></div>
+            <div style="margin-top:8px" class="muted">Fuente: Datos Incrustados</div>
           </div>
         </div>
       </div>
