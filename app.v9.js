@@ -1,6 +1,6 @@
-// app.v9.js — SOLO CSV, SIN SUPABASE (versión funcionamiento garantizado)
+// app.v9.js — CSV desde GitHub RAW (sin CORS)
 const GEOJSON_PROVINCIAS = "provincias_simplificado.geojson";
-const CSV_PATH = "instituciones_FINAL_1_.csv";
+const CSV_PATH = "https://raw.githubusercontent.com/powerpaz/AMIE/main/instituciones_FINAL_1_.csv";
 
 let rawRows = [];
 let filteredRows = [];
@@ -78,7 +78,7 @@ async function init(){
 
 async function loadFromCSV(){
   return new Promise((resolve)=>{
-    el('srcLabel').textContent = 'CSV';
+    el('srcLabel').textContent = 'GitHub Raw';
     el('status').textContent = 'Cargando datos…';
     
     Papa.parse(CSV_PATH, {
