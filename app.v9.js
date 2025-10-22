@@ -1,6 +1,4 @@
-// SOLUCIÓN: Invertir coordenadas de Supabase automáticamente
-import { supabase, hasSupabase, fetchInstituciones } from "./supabaseClient.js";
-
+// app.v9.js — SOLO CSV, SIN SUPABASE (versión funcionamiento garantizado)
 const GEOJSON_PROVINCIAS = "provincias_simplificado.geojson";
 const CSV_PATH = "instituciones_FINAL_1_.csv";
 
@@ -62,9 +60,9 @@ async function init(){
       style: {color:'#2b5cab', weight:1, opacity:0.7, fillOpacity:0},
       onEachFeature: (f,l)=> l.bindTooltip(f.properties?.DPA_DESPROV || f.properties?.name || 'Provincia',{sticky:true})
     }).addTo(map);
-  });
+  }).catch(err => console.error('Error GeoJSON:', err));
 
-  await loadData();
+  await loadFromCSV();
   setupFilters();
   applyFilters();
 
@@ -78,42 +76,25 @@ async function init(){
   el('btnExport').addEventListener('click', exportCSV);
 }
 
-async function loadData(){
-  if(hasSupabase()){
-    el('srcLabel').textContent = 'Supabase';
-    el('status').textContent = 'Consultando Supabase…';
-    const { data, error } = await fetchInstituciones({ zona:null, nivel:null, anio:null, limit:10000 });
-    if(error || !data || !data.length){
-      console.warn('Supabase error, usando CSV:', error);
-      el('srcLabel').textContent = 'CSV';
-      await loadFromCSV();
-    }else{
-      rawRows = (data || []).map(row => ({
-        ...row,
-        latitud: row.longitud,
-        longitud: row.latitud
-      }));
-      console.log('✓ Coordenadas invertidas desde Supabase');
-      el('status').textContent = `Supabase listo (${rawRows.length} filas)`;
-    }
-  }else{
-    el('srcLabel').textContent = 'CSV';
-    await loadFromCSV();
-  }
-}
-
 async function loadFromCSV(){
   return new Promise((resolve)=>{
+    el('srcLabel').textContent = 'CSV';
+    el('status').textContent = 'Cargando datos…';
+    
     Papa.parse(CSV_PATH, {
-      download:true, header:true, dynamicTyping:false, skipEmptyLines:true, delimiter:',',
+      download:true, 
+      header:true, 
+      dynamicTyping:false, 
+      skipEmptyLines:true, 
+      delimiter:',',
       complete: res => { 
         rawRows = res.data.filter(r => r && Object.keys(r).length > 0);
-        el('status').textContent = `CSV listo (${rawRows.length} filas)`;
+        el('status').textContent = `Datos listos (${rawRows.length} instituciones)`;
         resolve(); 
       },
       error: err => {
         console.error('Error cargando CSV:', err);
-        el('status').textContent = 'Error cargando datos';
+        el('status').textContent = 'Error: no se pudieron cargar los datos';
         resolve();
       }
     });
@@ -184,14 +165,6 @@ function applyFilters(){
   updateTable();
   updateMap();
   el('countInstituciones').textContent = `Instituciones: ${filteredRows.length}`;
-  const actif = [];
-  if(el('amieTxt').value) actif.push(`AMIE~${el('amieTxt').value}`);
-  if(el('provSel').value) actif.push(`PROV=${el('provSel').value}`);
-  if(el('cantSel').value) actif.push(`CANT=${el('cantSel').value}`);
-  if(el('zonaSel').value) actif.push(`ZONA=${el('zonaSel').value}`);
-  if(el('nivelSel').value) actif.push(`NIVEL=${el('nivelSel').value}`);
-  if(el('anioSel').value) actif.push(`AÑO=${el('anioSel').value}`);
-  el('filtrosActivos').textContent = `Filtros activos: ${actif.join(' • ') || '—'}`;
 }
 
 function updateTable(){
@@ -224,8 +197,11 @@ function updateMap(){
   const bounds = [];
   
   filteredRows.forEach(row=>{
-    const lat = parseFloat(get(row,['latitud','LATITUD','lat','LAT']));
-    const lon = parseFloat(get(row,['longitud','LONGITUD','lon','LON']));
+    const latVal = get(row,['latitud','LATITUD','lat','LAT']);
+    const lonVal = get(row,['longitud','LONGITUD','lon','LON']);
+    
+    const lat = parseFloat(latVal);
+    const lon = parseFloat(lonVal);
     
     if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
