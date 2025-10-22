@@ -1,9 +1,8 @@
-// app.v9.js — VERSIÓN FINAL DEFINITIVA
-// Prioriza Supabase, fallback a CSV instituciones_FINAL_1_.csv
+// SOLUCIÓN: Invertir coordenadas de Supabase automáticamente
 import { supabase, hasSupabase, fetchInstituciones } from "./supabaseClient.js";
 
 const GEOJSON_PROVINCIAS = "provincias_simplificado.geojson";
-const CSV_PATH = "instituciones_FINAL_1_.csv"; // ← CSV correcto con delimiter ','
+const CSV_PATH = "instituciones_FINAL_1_.csv";
 
 let rawRows = [];
 let filteredRows = [];
@@ -58,7 +57,6 @@ async function init(){
   cluster = L.markerClusterGroup({ disableClusteringAtZoom: 13 });
   map.addLayer(cluster);
 
-  // Provincias
   fetch(GEOJSON_PROVINCIAS).then(r=>r.json()).then(geo=>{
     provLayer = L.geoJSON(geo,{
       style: {color:'#2b5cab', weight:1, opacity:0.7, fillOpacity:0},
@@ -86,11 +84,16 @@ async function loadData(){
     el('status').textContent = 'Consultando Supabase…';
     const { data, error } = await fetchInstituciones({ zona:null, nivel:null, anio:null, limit:10000 });
     if(error || !data || !data.length){
-      console.warn('Supabase error o sin datos, usando CSV:', error);
+      console.warn('Supabase error, usando CSV:', error);
       el('srcLabel').textContent = 'CSV';
       await loadFromCSV();
     }else{
-      rawRows = data || [];
+      rawRows = (data || []).map(row => ({
+        ...row,
+        latitud: row.longitud,
+        longitud: row.latitud
+      }));
+      console.log('✓ Coordenadas invertidas desde Supabase');
       el('status').textContent = `Supabase listo (${rawRows.length} filas)`;
     }
   }else{
@@ -102,11 +105,7 @@ async function loadData(){
 async function loadFromCSV(){
   return new Promise((resolve)=>{
     Papa.parse(CSV_PATH, {
-      download:true, 
-      header:true, 
-      dynamicTyping:false, 
-      skipEmptyLines:true, 
-      delimiter:',', // ← CAMBIO: CSV con comas, no punto y coma
+      download:true, header:true, dynamicTyping:false, skipEmptyLines:true, delimiter:',',
       complete: res => { 
         rawRows = res.data.filter(r => r && Object.keys(r).length > 0);
         el('status').textContent = `CSV listo (${rawRows.length} filas)`;
@@ -223,19 +222,12 @@ function updateTable(){
 function updateMap(){
   if(cluster) cluster.clearLayers();
   const bounds = [];
-  let invalidCount = 0;
   
   filteredRows.forEach(row=>{
-    const latVal = get(row,['latitud','LATITUD','lat','LAT']);
-    const lonVal = get(row,['longitud','LONGITUD','lon','LON']);
+    const lat = parseFloat(get(row,['latitud','LATITUD','lat','LAT']));
+    const lon = parseFloat(get(row,['longitud','LONGITUD','lon','LON']));
     
-    const lat = parseFloat(latVal);
-    const lon = parseFloat(lonVal);
-    
-    if(!Number.isFinite(lat) || !Number.isFinite(lon)){
-      invalidCount++;
-      return;
-    }
+    if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
     const amie = get(row,['amie','AMIE']) || '';
     const institucion = get(row,['institucion','INSTITUCION']) || '';
@@ -252,11 +244,7 @@ function updateMap(){
     const zona = get(row,['zona','ZONA']) || '';
 
     const marker = L.circleMarker([lat, lon], {
-      radius: 6,
-      weight: 1,
-      color: '#111',
-      fillColor: regimeColor(regimen),
-      fillOpacity: 0.9
+      radius: 6, weight: 1, color: '#111', fillColor: regimeColor(regimen), fillOpacity: 0.9
     });
 
     const rows = [
@@ -277,13 +265,7 @@ function updateMap(){
     bounds.push([lat, lon]);
   });
 
-  if(bounds.length){
-    map.fitBounds(bounds, {padding:[16,16]});
-  }
-  
-  if(invalidCount > 0){
-    console.warn(`${invalidCount} registros con coordenadas inválidas`);
-  }
+  if(bounds.length) map.fitBounds(bounds, {padding:[16,16]});
 }
 
 function clearFilters(){
@@ -308,9 +290,7 @@ function exportCSV(){
   const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = 'export_filtrado.csv';
-  a.click();
+  a.href = url; a.download = 'export_filtrado.csv'; a.click();
   URL.revokeObjectURL(url);
 }
 
