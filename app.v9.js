@@ -1,8 +1,9 @@
-// app.v9.js — usa Supabase; CSV fallback -> rubros_csv.csv (;) y columnas limpias
+// app.v9.js — VERSIÓN FINAL DEFINITIVA
+// Prioriza Supabase, fallback a CSV instituciones_FINAL_1_.csv
 import { supabase, hasSupabase, fetchInstituciones } from "./supabaseClient.js";
 
 const GEOJSON_PROVINCIAS = "provincias_simplificado.geojson";
-const CSV_PATH = "rubros_csv.csv"; // nuevo dataset limpio con ';'
+const CSV_PATH = "instituciones_FINAL_1_.csv"; // ← CSV correcto con delimiter ','
 
 let rawRows = [];
 let filteredRows = [];
@@ -85,6 +86,7 @@ async function loadData(){
     el('status').textContent = 'Consultando Supabase…';
     const { data, error } = await fetchInstituciones({ zona:null, nivel:null, anio:null, limit:10000 });
     if(error || !data || !data.length){
+      console.warn('Supabase error o sin datos, usando CSV:', error);
       el('srcLabel').textContent = 'CSV';
       await loadFromCSV();
     }else{
@@ -100,8 +102,21 @@ async function loadData(){
 async function loadFromCSV(){
   return new Promise((resolve)=>{
     Papa.parse(CSV_PATH, {
-      download:true, header:true, dynamicTyping:false, skipEmptyLines:true, delimiter:';',
-      complete: res => { rawRows = res.data; el('status').textContent = `CSV listo (${rawRows.length} filas)`; resolve(); }
+      download:true, 
+      header:true, 
+      dynamicTyping:false, 
+      skipEmptyLines:true, 
+      delimiter:',', // ← CAMBIO: CSV con comas, no punto y coma
+      complete: res => { 
+        rawRows = res.data.filter(r => r && Object.keys(r).length > 0);
+        el('status').textContent = `CSV listo (${rawRows.length} filas)`;
+        resolve(); 
+      },
+      error: err => {
+        console.error('Error cargando CSV:', err);
+        el('status').textContent = 'Error cargando datos';
+        resolve();
+      }
     });
   });
 }
@@ -208,13 +223,17 @@ function updateTable(){
 function updateMap(){
   if(cluster) cluster.clearLayers();
   const bounds = [];
+  let invalidCount = 0;
+  
   filteredRows.forEach(row=>{
-    // AQUÍ ESTÁ LA CORRECCIÓN: buscamos ambas formas (minúsculas y mayúsculas)
-    const lat = parseFloat(get(row,['latitud','LATITUD','lat','LAT']));
-    const lon = parseFloat(get(row,['longitud','LONGITUD','lon','LON']));
+    const latVal = get(row,['latitud','LATITUD','lat','LAT']);
+    const lonVal = get(row,['longitud','LONGITUD','lon','LON']);
+    
+    const lat = parseFloat(latVal);
+    const lon = parseFloat(lonVal);
     
     if(!Number.isFinite(lat) || !Number.isFinite(lon)){
-      console.warn('Coordenadas inválidas:', {lat, lon, row});
+      invalidCount++;
       return;
     }
 
@@ -232,7 +251,6 @@ function updateMap(){
     const regimen = get(row,['regimen','RÉGIMEN','REGIMEN']) || '';
     const zona = get(row,['zona','ZONA']) || '';
 
-    // Crear marcador circular
     const marker = L.circleMarker([lat, lon], {
       radius: 6,
       weight: 1,
@@ -261,6 +279,10 @@ function updateMap(){
 
   if(bounds.length){
     map.fitBounds(bounds, {padding:[16,16]});
+  }
+  
+  if(invalidCount > 0){
+    console.warn(`${invalidCount} registros con coordenadas inválidas`);
   }
 }
 
