@@ -1,0 +1,411 @@
+/* ==============================================
+   ESTILOS PRINCIPALES - TEMA DARK MODE
+   ============================================== */
+
+body {
+  font-family: system-ui, Segoe UI, Arial, Helvetica, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  margin: 0;
+  color: #e0e0e0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 16px;
+  padding: 12px;
+  height: 100vh;
+}
+
+/* ==============================================
+   PANELES
+   ============================================== */
+
+aside {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  max-height: calc(100vh - 24px);
+}
+
+aside .panel {
+  background: #2a2a3e;
+  border: 1px solid #00ff88;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
+  flex-shrink: 0;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: linear-gradient(90deg, #00ff88 0%, #00d4aa 100%);
+  border-bottom: 1px solid #00b366;
+}
+
+.panel-title {
+  font-weight: 700;
+  color: #1a1a2e;
+  font-size: 0.95rem;
+}
+
+.panel-header button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.panel-header button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.pad {
+  padding: 12px 14px;
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+/* ==============================================
+   FILTROS
+   ============================================== */
+
+.filters .row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.filters > div {
+  margin-bottom: 12px;
+}
+
+label {
+  font-size: 0.8rem;
+  color: #00ff88;
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+input, select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #00ff88;
+  border-radius: 6px;
+  background: rgba(26, 31, 46, 0.8);
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #00d4aa;
+  background: rgba(26, 31, 46, 1);
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.2);
+}
+
+input::placeholder {
+  color: #6b7280;
+}
+
+/* ==============================================
+   BOTONES
+   ============================================== */
+
+button {
+  width: 100%;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, #00ff88 0%, #00d4aa 100%);
+  color: #1a1f2e;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+#btnLimpiar {
+  margin-left: 8px;
+  width: auto;
+}
+
+#btnExport {
+  width: 100%;
+}
+
+/* ==============================================
+   MAPA - MÁS GRANDE
+   ============================================== */
+
+main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  border: 2px solid #00ff88;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+  overflow: hidden;
+  flex: 1;
+}
+
+/* ==============================================
+   TABLA
+   ============================================== */
+
+#rubrosTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(42, 47, 62, 0.5);
+  font-size: 0.9rem;
+}
+
+#rubrosTable thead {
+  background: linear-gradient(90deg, #00ff88 0%, #00d4aa 100%);
+  color: #1a1f2e;
+}
+
+#rubrosTable th {
+  padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+#rubrosTable td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.1);
+  color: #e0e0e0;
+}
+
+#rubrosTable tbody tr {
+  transition: background 0.2s ease;
+}
+
+#rubrosTable tbody tr:hover {
+  background: rgba(0, 255, 136, 0.05);
+}
+
+#rubrosTable tfoot {
+  background: rgba(0, 255, 136, 0.1);
+  font-weight: 700;
+  color: #00ff88;
+  border-top: 2px solid #00ff88;
+}
+
+#rubrosTable tfoot td {
+  padding: 10px 12px;
+}
+
+/* ==============================================
+   INFORMACIÓN
+   ============================================== */
+
+.muted {
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+#countInstituciones, 
+#filtrosActivos {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(0, 255, 136, 0.1);
+  border-left: 3px solid #00ff88;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #e0e0e0;
+}
+
+.status {
+  display: inline-block;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: white;
+}
+
+/* ==============================================
+   POPUP
+   ============================================== */
+
+.popup {
+  background: white;
+  border: 1px solid #0ea5e9;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.popup table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+.popup table td {
+  padding: 4px 0;
+  border-bottom: 1px dotted #e0f2fe;
+}
+
+.popup table td:first-child {
+  font-weight: 600;
+  color: #1e40af;
+  padding-right: 10px;
+}
+
+/* ==============================================
+   LEAFLET CONTROLS
+   ============================================== */
+
+.leaflet-control-attribution {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.leaflet-control-zoom {
+  border: 1px solid #00ff88 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3) !important;
+}
+
+.leaflet-control-zoom a {
+  background: #1a1f2e !important;
+  color: #00ff88 !important;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.2) !important;
+  font-weight: bold;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  transition: all 0.2s ease;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #00ff88 !important;
+  color: #1a1f2e !important;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: none !important;
+}
+
+/* ==============================================
+   RESPONSIVE
+   ============================================== */
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  #map {
+    height: 60vh;
+  }
+
+  .filters .row {
+    grid-template-columns: 1fr;
+  }
+
+  aside {
+    max-height: none;
+  }
+
+  .pad {
+    max-height: none;
+  }
+}
+
+/* ==============================================
+   SCROLLBAR
+   ============================================== */
+
+aside::-webkit-scrollbar {
+  width: 6px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: rgba(42, 47, 62, 0.5);
+}
+
+aside::-webkit-scrollbar-thumb {
+  background: #00ff88;
+  border-radius: 3px;
+}
+
+aside::-webkit-scrollbar-thumb:hover {
+  background: #00d4aa;
+}
+
+.pad::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pad::-webkit-scrollbar-track {
+  background: rgba(42, 47, 62, 0.5);
+}
+
+.pad::-webkit-scrollbar-thumb {
+  background: #00ff88;
+  border-radius: 3px;
+}
+
+.pad::-webkit-scrollbar-thumb:hover {
+  background: #00d4aa;
+}
+
+/* ==============================================
+   ENCABEZADO DEL MAPA
+   ============================================== */
+
+.map-header {
+  background: linear-gradient(90deg, #00ff88 0%, #00d4aa 100%);
+  padding: 16px 20px;
+  border-bottom: 2px solid #00b366;
+  box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+}
+
+.map-title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1a1f2e;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.map-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.9rem;
+  color: rgba(26, 31, 46, 0.9);
+  font-weight: 400;
+  letter-spacing: 0.2px;
+}
