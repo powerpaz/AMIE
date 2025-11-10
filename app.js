@@ -1,6 +1,6 @@
 // ===============================================
 // Sistema de Visualización Geográfica - AMIE
-// JavaScript Principal con mejoras solicitadas
+// JavaScript Principal v2.1 - Corregido
 // ===============================================
 
 (function() {
@@ -27,6 +27,24 @@
       primaryDark: '#6b9915',
       black: '#0a0a0a',
       white: '#ffffff'
+    },
+    
+    // Valores totales del Anexo 2 (para validación)
+    totalesPlanificados: {
+      2026: {
+        materialDidactico: 2726916.18,
+        mobiliario: 1389273.18,
+        juegosExteriores: 707050.00,
+        total: 4823239.36,
+        instituciones: 335
+      },
+      2027: {
+        materialDidactico: 5212883.85,
+        mobiliario: 2691920.17,
+        juegosExteriores: 987500.00,
+        total: 8892304.02,
+        instituciones: 590
+      }
     }
   };
 
@@ -49,6 +67,7 @@
   document.addEventListener('DOMContentLoaded', initApp);
 
   function initApp() {
+    console.log('Iniciando aplicación AMIE v2.1');
     initMap();
     loadData();
     setupEventListeners();
@@ -63,7 +82,7 @@
       attributionControl: true
     });
 
-    // Capa base del mapa (OpenStreetMap con estilo personalizado)
+    // Capa base del mapa
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors | Sistema AMIE',
       maxZoom: CONFIG.maxZoom,
@@ -106,6 +125,7 @@
     fetch('data.json')
       .then(response => response.json())
       .then(jsonData => {
+        console.log('Datos cargados desde JSON:', jsonData.length);
         data = jsonData;
         processData();
       })
@@ -115,6 +135,7 @@
           .then(response => response.text())
           .then(csvText => {
             data = parseCSV(csvText);
+            console.log('Datos cargados desde CSV:', data.length);
             processData();
           })
           .catch(error => {
@@ -124,17 +145,23 @@
       });
   }
 
-  // Parsear CSV
+  // Parsear CSV mejorado para manejar comas dentro de campos
   function parseCSV(csvText) {
     const lines = csvText.split('\n').filter(line => line.trim());
     const headers = lines[0].split(',').map(h => h.trim());
     const result = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',');
+      // Manejar campos con comas dentro de comillas
+      const regex = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
+      const values = lines[i].split(regex).map(v => {
+        // Remover comillas si existen
+        return v.replace(/^"|"$/g, '').trim();
+      });
+      
       const obj = {};
       headers.forEach((header, index) => {
-        obj[header] = values[index] ? values[index].trim() : '';
+        obj[header] = values[index] || '';
       });
       result.push(obj);
     }
@@ -155,11 +182,16 @@
         JE_MONTO_USD: parseFloat(row.JE_MONTO_USD) || 0,
         TOTAL_INVERSION: (parseFloat(row.MD_MONTO_USD) || 0) + 
                         (parseFloat(row.M_MONTO_USD) || 0) + 
-                        (parseFloat(row.JE_MONTO_USD) || 0)
+                        (parseFloat(row.JE_MONTO_USD) || 0),
+        // Asegurar que el año sea string
+        AUX_ANIO_DOTACION: String(row.AUX_ANIO_DOTACION || '').trim()
       };
     }).filter(row => row.LATITUD !== 0 && row.LONGITUD !== 0);
 
     filteredData = [...data];
+    
+    // Validar totales contra el Anexo 2
+    validateTotals();
     
     populateFilters();
     updateMarkers();
@@ -167,26 +199,65 @@
     updateStatus('Datos cargados: ' + data.length + ' instituciones');
   }
 
+  // Validar totales contra el Anexo 2
+  function validateTotals() {
+    const totales = {};
+    
+    data.forEach(row => {
+      const year = row.AUX_ANIO_DOTACION;
+      if (!totales[year]) {
+        totales[year] = {
+          materialDidactico: 0,
+          mobiliario: 0,
+          juegosExteriores: 0,
+          instituciones: 0
+        };
+      }
+      totales[year].materialDidactico += row.MD_MONTO_USD;
+      totales[year].mobiliario += row.M_MONTO_USD;
+      totales[year].juegosExteriores += row.JE_MONTO_USD;
+      totales[year].instituciones++;
+    });
+    
+    console.log('=== Validación de totales contra Anexo 2 ===');
+    Object.keys(totales).forEach(year => {
+      const t = totales[year];
+      const total = t.materialDidactico + t.mobiliario + t.juegosExteriores;
+      console.log(`Año ${year}:`);
+      console.log(`  Instituciones: ${t.instituciones}`);
+      console.log(`  Material Didáctico: $${t.materialDidactico.toFixed(2)}`);
+      console.log(`  Mobiliario: $${t.mobiliario.toFixed(2)}`);
+      console.log(`  Juegos Exteriores: $${t.juegosExteriores.toFixed(2)}`);
+      console.log(`  TOTAL: $${total.toFixed(2)}`);
+      
+      if (CONFIG.totalesPlanificados[year]) {
+        const planificado = CONFIG.totalesPlanificados[year];
+        console.log(`  Diferencia vs Anexo 2: $${(total - planificado.total).toFixed(2)}`);
+      }
+    });
+  }
+
   // Poblar los selectores de filtros
   function populateFilters() {
     // Provincia
-    const provincias = [...new Set(data.map(d => d.PROVINCIA))].sort();
+    const provincias = [...new Set(data.map(d => d.PROVINCIA))].filter(p => p).sort();
     populateSelect('provSel', provincias);
 
     // Cantón
-    const cantones = [...new Set(data.map(d => d.CANTON))].sort();
+    const cantones = [...new Set(data.map(d => d.CANTON))].filter(c => c).sort();
     populateSelect('cantSel', cantones);
 
     // Zona
-    const zonas = [...new Set(data.map(d => d.ZONA))].sort();
+    const zonas = [...new Set(data.map(d => d.ZONA))].filter(z => z).sort();
     populateSelect('zonaSel', zonas);
 
     // Nivel de Educación
-    const niveles = [...new Set(data.map(d => d.NIVEL_DE_EDUCACION))].sort();
+    const niveles = [...new Set(data.map(d => d.NIVEL_DE_EDUCACION))].filter(n => n).sort();
     populateSelect('nivelSel', niveles);
 
-    // Año de Dotación
-    const anios = [...new Set(data.map(d => d.AUX_ANIO_DOTACION))].sort();
+    // Año de Dotación - IMPORTANTE: manejar como strings
+    const anios = [...new Set(data.map(d => d.AUX_ANIO_DOTACION))].filter(a => a).sort();
+    console.log('Años disponibles para filtros:', anios);
     populateSelect('anioSel', anios);
 
     // Régimen ya está hardcodeado en el HTML (COSTA/SIERRA)
@@ -195,7 +266,10 @@
   // Llenar un selector con opciones
   function populateSelect(selectId, options) {
     const select = document.getElementById(selectId);
-    if (!select) return;
+    if (!select) {
+      console.warn(`Selector ${selectId} no encontrado`);
+      return;
+    }
     
     // Mantener la primera opción (Todos)
     while (select.options.length > 1) {
@@ -215,32 +289,59 @@
   // Configurar event listeners
   function setupEventListeners() {
     // Filtros básicos
-    document.getElementById('amieTxt').addEventListener('input', applyFilters);
-    document.getElementById('provSel').addEventListener('change', onProvinciaChange);
-    document.getElementById('cantSel').addEventListener('change', applyFilters);
-    document.getElementById('zonaSel').addEventListener('change', applyFilters);
-    document.getElementById('nivelSel').addEventListener('change', applyFilters);
-    document.getElementById('anioSel').addEventListener('change', applyFilters);
-    document.getElementById('regimenSel').addEventListener('change', applyFilters);
+    const amieTxt = document.getElementById('amieTxt');
+    if (amieTxt) amieTxt.addEventListener('input', applyFilters);
+    
+    const provSel = document.getElementById('provSel');
+    if (provSel) provSel.addEventListener('change', onProvinciaChange);
+    
+    const cantSel = document.getElementById('cantSel');
+    if (cantSel) cantSel.addEventListener('change', applyFilters);
+    
+    const zonaSel = document.getElementById('zonaSel');
+    if (zonaSel) zonaSel.addEventListener('change', applyFilters);
+    
+    const nivelSel = document.getElementById('nivelSel');
+    if (nivelSel) nivelSel.addEventListener('change', applyFilters);
+    
+    const anioSel = document.getElementById('anioSel');
+    if (anioSel) anioSel.addEventListener('change', applyFilters);
+    
+    const regimenSel = document.getElementById('regimenSel');
+    if (regimenSel) regimenSel.addEventListener('change', applyFilters);
 
     // Botones de filtro principales
-    document.getElementById('btnAnioFilter').addEventListener('click', function() {
-      const dropdown = document.getElementById('anioFilterDropdown');
-      dropdown.classList.toggle('hidden');
-      document.getElementById('regimenFilterDropdown').classList.add('hidden');
-    });
+    const btnAnioFilter = document.getElementById('btnAnioFilter');
+    if (btnAnioFilter) {
+      btnAnioFilter.addEventListener('click', function() {
+        const dropdown = document.getElementById('anioFilterDropdown');
+        if (dropdown) {
+          dropdown.classList.toggle('hidden');
+          const regimenDropdown = document.getElementById('regimenFilterDropdown');
+          if (regimenDropdown) regimenDropdown.classList.add('hidden');
+        }
+      });
+    }
 
-    document.getElementById('btnRegimenFilter').addEventListener('click', function() {
-      const dropdown = document.getElementById('regimenFilterDropdown');
-      dropdown.classList.toggle('hidden');
-      document.getElementById('anioFilterDropdown').classList.add('hidden');
-    });
+    const btnRegimenFilter = document.getElementById('btnRegimenFilter');
+    if (btnRegimenFilter) {
+      btnRegimenFilter.addEventListener('click', function() {
+        const dropdown = document.getElementById('regimenFilterDropdown');
+        if (dropdown) {
+          dropdown.classList.toggle('hidden');
+          const anioDropdown = document.getElementById('anioFilterDropdown');
+          if (anioDropdown) anioDropdown.classList.add('hidden');
+        }
+      });
+    }
 
     // Botón limpiar
-    document.getElementById('btnLimpiar').addEventListener('click', clearFilters);
+    const btnLimpiar = document.getElementById('btnLimpiar');
+    if (btnLimpiar) btnLimpiar.addEventListener('click', clearFilters);
 
     // Botón exportar
-    document.getElementById('btnExport').addEventListener('click', exportData);
+    const btnExport = document.getElementById('btnExport');
+    if (btnExport) btnExport.addEventListener('click', exportData);
   }
 
   // Cuando cambia la provincia, filtrar cantones
@@ -252,10 +353,10 @@
         data
           .filter(d => d.PROVINCIA === provincia)
           .map(d => d.CANTON)
-      )].sort();
+      )].filter(c => c).sort();
       populateSelect('cantSel', cantones);
     } else {
-      const cantones = [...new Set(data.map(d => d.CANTON))].sort();
+      const cantones = [...new Set(data.map(d => d.CANTON))].filter(c => c).sort();
       populateSelect('cantSel', cantones);
     }
     
@@ -265,25 +366,35 @@
   // Aplicar filtros
   function applyFilters() {
     filters = {
-      amie: document.getElementById('amieTxt').value.toUpperCase(),
-      provincia: document.getElementById('provSel').value,
-      canton: document.getElementById('cantSel').value,
-      zona: document.getElementById('zonaSel').value,
-      nivel: document.getElementById('nivelSel').value,
-      anio: document.getElementById('anioSel').value,
-      regimen: document.getElementById('regimenSel').value
+      amie: document.getElementById('amieTxt')?.value.toUpperCase() || '',
+      provincia: document.getElementById('provSel')?.value || '',
+      canton: document.getElementById('cantSel')?.value || '',
+      zona: document.getElementById('zonaSel')?.value || '',
+      nivel: document.getElementById('nivelSel')?.value || '',
+      anio: document.getElementById('anioSel')?.value || '',
+      regimen: document.getElementById('regimenSel')?.value || ''
     };
 
+    console.log('Filtros aplicados:', filters);
+
     filteredData = data.filter(row => {
+      // Comparación consistente de años como strings
+      const rowAnio = String(row.AUX_ANIO_DOTACION || '').trim();
+      const filterAnio = String(filters.anio || '').trim();
+      
+      const matchAnio = !filterAnio || rowAnio === filterAnio;
+      
       return (!filters.amie || row.AMIE.includes(filters.amie)) &&
              (!filters.provincia || row.PROVINCIA === filters.provincia) &&
              (!filters.canton || row.CANTON === filters.canton) &&
              (!filters.zona || row.ZONA === filters.zona) &&
              (!filters.nivel || row.NIVEL_DE_EDUCACION === filters.nivel) &&
-             (!filters.anio || row.AUX_ANIO_DOTACION === filters.anio) &&
+             matchAnio &&
              (!filters.regimen || row.REGIMEN === filters.regimen);
     });
 
+    console.log(`Datos filtrados: ${filteredData.length} de ${data.length}`);
+    
     updateMarkers();
     updateStatistics();
     updateFilterStatus();
@@ -300,8 +411,11 @@
     document.getElementById('regimenSel').value = '';
     
     // Ocultar dropdowns de filtros
-    document.getElementById('anioFilterDropdown').classList.add('hidden');
-    document.getElementById('regimenFilterDropdown').classList.add('hidden');
+    const anioDropdown = document.getElementById('anioFilterDropdown');
+    if (anioDropdown) anioDropdown.classList.add('hidden');
+    
+    const regimenDropdown = document.getElementById('regimenFilterDropdown');
+    if (regimenDropdown) regimenDropdown.classList.add('hidden');
     
     applyFilters();
   }
@@ -386,6 +500,10 @@
             <span class="popup-label">Zona:</span>
             <span class="popup-value">${row.ZONA || 'N/A'}</span>
           </div>
+          <div class="popup-row">
+            <span class="popup-label">Año de Dotación:</span>
+            <span class="popup-value">${row.AUX_ANIO_DOTACION || 'N/A'}</span>
+          </div>
           <div class="popup-total">
             <div class="popup-total-row">
               <span class="popup-total-label">Inversión Total:</span>
@@ -406,26 +524,42 @@
     const totalGeneral = totalMD + totalM + totalJE;
 
     // Actualizar contadores
-    document.getElementById('countInstituciones').textContent = totalInstituciones.toLocaleString();
-    document.getElementById('totalInversion').textContent = formatCurrency(totalGeneral);
-    document.getElementById('totalCell').textContent = formatCurrency(totalGeneral);
+    const countElement = document.getElementById('countInstituciones');
+    if (countElement) countElement.textContent = totalInstituciones.toLocaleString();
+    
+    const inversionElement = document.getElementById('totalInversion');
+    if (inversionElement) inversionElement.textContent = formatCurrency(totalGeneral);
+    
+    const totalCellElement = document.getElementById('totalCell');
+    if (totalCellElement) totalCellElement.textContent = formatCurrency(totalGeneral);
 
     // Actualizar tabla de rubros
     const tbody = document.querySelector('#rubrosTable tbody');
-    tbody.innerHTML = `
-      <tr>
-        <td>Material Didáctico</td>
-        <td>${formatCurrency(totalMD)}</td>
-      </tr>
-      <tr>
-        <td>Mobiliario</td>
-        <td>${formatCurrency(totalM)}</td>
-      </tr>
-      <tr>
-        <td>Juegos Exteriores</td>
-        <td>${formatCurrency(totalJE)}</td>
-      </tr>
-    `;
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td>Material Didáctico</td>
+          <td>${formatCurrency(totalMD)}</td>
+        </tr>
+        <tr>
+          <td>Mobiliario</td>
+          <td>${formatCurrency(totalM)}</td>
+        </tr>
+        <tr>
+          <td>Juegos Exteriores</td>
+          <td>${formatCurrency(totalJE)}</td>
+        </tr>
+      `;
+    }
+    
+    // Log para verificación
+    console.log('Estadísticas actualizadas:', {
+      instituciones: totalInstituciones,
+      materialDidactico: totalMD,
+      mobiliario: totalM,
+      juegosExteriores: totalJE,
+      total: totalGeneral
+    });
   }
 
   // Actualizar estado de filtros
@@ -444,7 +578,8 @@
       ? `Filtros activos: ${activeFilters.join(', ')}`
       : 'Sin filtros activos';
     
-    document.getElementById('filtrosActivos').textContent = statusText;
+    const filtrosElement = document.getElementById('filtrosActivos');
+    if (filtrosElement) filtrosElement.textContent = statusText;
   }
 
   // Exportar datos a CSV
@@ -457,7 +592,8 @@
     const headers = [
       'AMIE', 'INSTITUCION', 'AUX_IE_MATERIAL', 'SOSTENIMIENTO', 
       'NIVEL_DE_EDUCACION', 'REGIMEN', 'PROVINCIA', 'CANTON', 
-      'ZONA', 'INVERSION_TOTAL', 'MD_MONTO_USD', 'M_MONTO_USD', 'JE_MONTO_USD'
+      'ZONA', 'AUX_ANIO_DOTACION', 'INVERSION_TOTAL', 
+      'MD_MONTO_USD', 'M_MONTO_USD', 'JE_MONTO_USD'
     ];
 
     let csvContent = headers.join(',') + '\n';
@@ -473,6 +609,7 @@
         row.PROVINCIA || '',
         row.CANTON || '',
         row.ZONA || '',
+        row.AUX_ANIO_DOTACION || '',
         row.TOTAL_INVERSION.toFixed(2),
         row.MD_MONTO_USD.toFixed(2),
         row.M_MONTO_USD.toFixed(2),
@@ -513,6 +650,7 @@
     if (statusElement) {
       statusElement.textContent = message;
     }
+    console.log('Estado:', message);
   }
 
   // Manejar errores
