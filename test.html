@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba de Datos AMIE</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0ea5e9;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #0ea5e9;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0284c7;
+        }
+        .stat-label {
+            color: #64748b;
+            font-size: 14px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #475569;
+        }
+        .success {
+            color: #22c55e;
+        }
+        .error {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Prueba de Carga de Datos AMIE</h1>
+        <div id="status">Cargando datos...</div>
+        <div id="stats" class="stats"></div>
+        <div id="sample"></div>
+    </div>
+
+    <script>
+        async function testData() {
+            const statusEl = document.getElementById('status');
+            const statsEl = document.getElementById('stats');
+            const sampleEl = document.getElementById('sample');
+
+            try {
+                // Intentar cargar JSON
+                const response = await fetch('data.json');
+                if (!response.ok) throw new Error('No se pudo cargar data.json');
+                
+                const data = await response.json();
+                
+                statusEl.innerHTML = '<span class="success">✅ Datos cargados correctamente</span>';
+                
+                // Estadísticas
+                const totalInstituciones = data.length;
+                const conCoordenadas = data.filter(d => d.LONGITUD && d.LATITUD && d.LONGITUD !== 0 && d.LATITUD !== 0).length;
+                const provincias = [...new Set(data.map(d => d.PROVINCIA).filter(Boolean))].length;
+                const zonas = [...new Set(data.map(d => d.ZONA).filter(Boolean))].length;
+                
+                // Calcular totales de montos
+                let totalMD = 0, totalM = 0, totalJE = 0;
+                data.forEach(d => {
+                    totalMD += parseFloat(d.MD_MONTO_USD) || 0;
+                    totalM += parseFloat(d.M_MONTO_USD) || 0;
+                    totalJE += parseFloat(d.JE_MONTO_USD) || 0;
+                });
+                
+                const formatCurrency = (num) => {
+                    return new Intl.NumberFormat('es-EC', { 
+                        style: 'currency', 
+                        currency: 'USD' 
+                    }).format(num);
+                };
+                
+                statsEl.innerHTML = `
+                    <div class="stat-box">
+                        <div class="stat-value">${totalInstituciones}</div>
+                        <div class="stat-label">Total Instituciones</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${conCoordenadas}</div>
+                        <div class="stat-label">Con Coordenadas Válidas</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${provincias}</div>
+                        <div class="stat-label">Provincias</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${zonas}</div>
+                        <div class="stat-label">Zonas</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${formatCurrency(totalMD)}</div>
+                        <div class="stat-label">Material Didáctico</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${formatCurrency(totalM)}</div>
+                        <div class="stat-label">Mobiliario</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${formatCurrency(totalJE)}</div>
+                        <div class="stat-label">Juegos Exteriores</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value">${formatCurrency(totalMD + totalM + totalJE)}</div>
+                        <div class="stat-label">Total General</div>
+                    </div>
+                `;
+                
+                // Muestra de datos
+                sampleEl.innerHTML = `
+                    <h2>Primeras 5 Instituciones</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>AMIE</th>
+                                <th>Institución</th>
+                                <th>Provincia</th>
+                                <th>Cantón</th>
+                                <th>Coordenadas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.slice(0, 5).map(d => `
+                                <tr>
+                                    <td>${d.AMIE || 'N/A'}</td>
+                                    <td>${d.INSTITUCION || 'N/A'}</td>
+                                    <td>${d.PROVINCIA || 'N/A'}</td>
+                                    <td>${d.CANTON || 'N/A'}</td>
+                                    <td>${d.LATITUD}, ${d.LONGITUD}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+            } catch (error) {
+                statusEl.innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                console.error('Error cargando datos:', error);
+            }
+        }
+
+        // Ejecutar prueba al cargar la página
+        testData();
+    </script>
+</body>
+</html>
