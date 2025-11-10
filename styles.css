@@ -1,14 +1,14 @@
 /* ===============================================
    Sistema de Visualización Geográfica - AMIE
    Estilos Personalizados
-   Colores: Verde #81b71a | Negro #0a0a0a
+   Colores: Morado #a349a4 | Negro #0a0a0a
    =============================================== */
 
 /* Variables CSS */
 :root {
-  --primary-green: #81b71a;
-  --primary-green-light: #9fcd3f;
-  --primary-green-dark: #6b9915;
+  --primary-green: #a349a4;
+  --primary-green-light: #c066c1;
+  --primary-green-dark: #8a3d8b;
   --primary-black: #0a0a0a;
   --gray-900: #1a1a1a;
   --gray-800: #2d2d2d;
@@ -155,7 +155,7 @@ html, body {
 .select-field:focus {
   outline: none;
   border-color: var(--primary-green);
-  box-shadow: 0 0 0 3px rgba(129, 183, 26, 0.1);
+  box-shadow: 0 0 0 3px rgba(163, 73, 164, 0.1);
 }
 
 .input-field::placeholder {
@@ -529,25 +529,25 @@ html, body {
 
 /* Cluster Customization */
 .marker-cluster-small {
-  background-color: rgba(129, 183, 26, 0.6);
+  background-color: rgba(163, 73, 164, 0.6);
 }
 
 .marker-cluster-small div {
-  background-color: rgba(129, 183, 26, 0.9);
+  background-color: rgba(163, 73, 164, 0.9);
   color: var(--white);
 }
 
 .marker-cluster-medium {
-  background-color: rgba(129, 183, 26, 0.7);
+  background-color: rgba(163, 73, 164, 0.7);
 }
 
 .marker-cluster-medium div {
-  background-color: rgba(129, 183, 26, 0.95);
+  background-color: rgba(163, 73, 164, 0.95);
   color: var(--white);
 }
 
 .marker-cluster-large {
-  background-color: rgba(129, 183, 26, 0.8);
+  background-color: rgba(163, 73, 164, 0.8);
 }
 
 .marker-cluster-large div {

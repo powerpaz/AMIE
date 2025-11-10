@@ -23,8 +23,8 @@
     
     // Colores del sistema
     colors: {
-      primary: '#81b71a',
-      primaryDark: '#6b9915',
+      primary: '#a349a4',
+      primaryDark: '#8a3d8b',
       black: '#0a0a0a',
       white: '#ffffff'
     },
