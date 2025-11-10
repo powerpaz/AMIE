@@ -1,224 +1,398 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Visor Geográfico Nacional - Sistema de Equipamiento Educativo</title>
-  
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" crossorigin="anonymous"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" crossorigin="anonymous"/>
-  
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="styles.css"/>
-  
-  <!-- JavaScript Libraries -->
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
-  <script defer src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" crossorigin="anonymous"></script>
-  
-  <!-- Application Scripts -->
-  <script defer src="config.js"></script>
-  <script defer src="app.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Visualización Geográfica Nacional</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Panel lateral izquierdo */
+        .sidebar {
+            width: 320px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .logo-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .logo {
+            height: 40px;
+            object-fit: contain;
+        }
+        
+        .filters {
+            padding: 20px;
+        }
+        
+        .filter-group {
+            margin-bottom: 20px;
+        }
+        
+        .filter-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filter-select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-select:hover {
+            border-color: #a855f7;
+        }
+        
+        .filter-select:focus {
+            outline: none;
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+        
+        .btn-search {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(124, 58, 237, 0.3);
+        }
+        
+        .btn-clear {
+            width: 100%;
+            padding: 10px;
+            background: white;
+            color: #7c3aed;
+            border: 2px solid #7c3aed;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn-clear:hover {
+            background: #7c3aed;
+            color: white;
+        }
+        
+        .stats-container {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            padding: 20px;
+            margin: 20px;
+            border-radius: 12px;
+            color: white;
+        }
+        
+        .stats-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .stat-detail {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        /* Mapa */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Info panel flotante */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            z-index: 1000;
+            min-width: 250px;
+            display: none;
+        }
+        
+        .info-panel.active {
+            display: block;
+        }
+        
+        .info-panel h3 {
+            color: #7c3aed;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .info-panel p {
+            font-size: 13px;
+            color: #4b5563;
+            margin-bottom: 5px;
+        }
+        
+        .info-panel strong {
+            color: #1f2937;
+        }
+        
+        /* Estilos personalizados para clusters */
+        .marker-cluster-small {
+            background-color: rgba(168, 85, 247, 0.6) !important;
+        }
+        .marker-cluster-small div {
+            background-color: rgba(124, 58, 237, 0.6) !important;
+            color: white !important;
+        }
+        
+        .marker-cluster-medium {
+            background-color: rgba(147, 51, 234, 0.6) !important;
+        }
+        .marker-cluster-medium div {
+            background-color: rgba(109, 40, 217, 0.6) !important;
+            color: white !important;
+        }
+        
+        .marker-cluster-large {
+            background-color: rgba(91, 33, 182, 0.6) !important;
+        }
+        .marker-cluster-large div {
+            background-color: rgba(76, 29, 149, 0.6) !important;
+            color: white !important;
+        }
+        
+        /* Loading spinner */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #7c3aed;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Footer */
+        .footer {
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
 </head>
 <body>
-  <div class="layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <!-- Filtros Panel -->
-      <div class="panel">
-        <div class="panel-header">
-          <h2 class="panel-title">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
-            </svg>
-            Filtros de Búsqueda
-          </h2>
-          <div class="status-container">
-            <span class="status" id="status"></span>
-          </div>
+    <div class="container">
+        <!-- Panel lateral -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>Sistema de Visualización Geográfica Nacional</h1>
+                <p>Instituciones Educativas del Ecuador</p>
+            </div>
+            
+            <div class="logo-container">
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Logo Ecuador" class="logo" id="logo-ecuador">
+                <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" alt="Logo Ministerio" class="logo" id="logo-ministerio">
+            </div>
+            
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="provincia">Provincia</label>
+                    <select id="provincia" class="filter-select">
+                        <option value="">Todas las provincias</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="canton">Cantón</label>
+                    <select id="canton" class="filter-select">
+                        <option value="">Todos los cantones</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="zona">Zona</label>
+                    <select id="zona" class="filter-select">
+                        <option value="">Todas las zonas</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="nivel">Nivel de Educación</label>
+                    <select id="nivel" class="filter-select">
+                        <option value="">Todos los niveles</option>
+                    </select>
+                </div>
+                
+                <button class="btn-search" onclick="aplicarFiltros()">
+                    🔍 Aplicar Filtros
+                </button>
+                
+                <button class="btn-clear" onclick="limpiarFiltros()">
+                    ✖ Limpiar Filtros
+                </button>
+            </div>
+            
+            <div class="stats-container">
+                <h3 class="stats-title">Resumen de Inversión</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-label">INSTITUCIONES</div>
+                        <div class="stat-value" id="total-instituciones">827</div>
+                        <div class="stat-detail">Instituciones educativas</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">INVERSIÓN TOTAL</div>
+                        <div class="stat-value">$11.698M</div>
+                        <div class="stat-detail">USD 11,698,472.82</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer">
+                <p>Base de Datos Integrada AMIE</p>
+                <p>© 2025 Ministerio de Educación</p>
+            </div>
         </div>
         
-        <div class="panel-content">
-          <div class="filters">
-            <!-- Campo AMIE -->
-            <div class="filter-group">
-              <label for="amieTxt">Código AMIE</label>
-              <input 
-                id="amieTxt" 
-                type="text" 
-                class="input-field" 
-                placeholder="Ingrese código AMIE..."
-              />
+        <!-- Mapa -->
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
             </div>
-            
-            <!-- Provincia y Cantón -->
-            <div class="filter-row">
-              <div class="filter-group">
-                <label for="provSel">Provincia</label>
-                <select id="provSel" class="select-field">
-                  <option value="">Todas las provincias</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <label for="cantSel">Cantón</label>
-                <select id="cantSel" class="select-field">
-                  <option value="">Todos los cantones</option>
-                </select>
-              </div>
+            <div class="info-panel" id="infoPanel">
+                <h3>Información de la Institución</h3>
+                <p><strong>Nombre:</strong> <span id="info-nombre"></span></p>
+                <p><strong>Provincia:</strong> <span id="info-provincia"></span></p>
+                <p><strong>Cantón:</strong> <span id="info-canton"></span></p>
+                <p><strong>Zona:</strong> <span id="info-zona"></span></p>
+                <p><strong>Nivel:</strong> <span id="info-nivel"></span></p>
+                <p><strong>Estudiantes:</strong> <span id="info-estudiantes"></span></p>
             </div>
-            
-            <!-- Zona y Nivel -->
-            <div class="filter-row">
-              <div class="filter-group">
-                <label for="zonaSel">Zona</label>
-                <select id="zonaSel" class="select-field">
-                  <option value="">Todas las zonas</option>
-                </select>
-              </div>
-              <div class="filter-group">
-                <label for="nivelSel">Nivel de Educación</label>
-                <select id="nivelSel" class="select-field">
-                  <option value="">Todos los niveles</option>
-                </select>
-              </div>
-            </div>
-            
-            <!-- Botones de filtro principales -->
-            <div class="filter-buttons">
-              <button id="btnAnioFilter" class="btn-filter primary">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-                Año de Dotación
-              </button>
-              <button id="btnRegimenFilter" class="btn-filter primary">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                Régimen
-              </button>
-            </div>
-            
-            <!-- Dropdowns ocultos para filtros -->
-            <div id="anioFilterDropdown" class="filter-dropdown hidden">
-              <select id="anioSel" class="select-field">
-                <option value="">Todos los años</option>
-              </select>
-            </div>
-            
-            <div id="regimenFilterDropdown" class="filter-dropdown hidden">
-              <select id="regimenSel" class="select-field">
-                <option value="">Todos los regímenes</option>
-                <option value="COSTA">Costa</option>
-                <option value="SIERRA">Sierra</option>
-              </select>
-            </div>
-            
-            <!-- Botón limpiar -->
-            <div class="filter-actions">
-              <button id="btnLimpiar" class="btn-clear">
-                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-                Limpiar Filtros
-              </button>
-            </div>
-            
-            <div class="data-source">
-              <span class="source-label">Fuente:</span> Base de Datos Integrada AMIE
-            </div>
-          </div>
         </div>
-      </div>
-      
-      <!-- Panel de Estadísticas -->
-      <div class="panel">
-        <div class="panel-header">
-          <h2 class="panel-title">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="20" x2="18" y2="10"></line>
-              <line x1="12" y1="20" x2="12" y2="4"></line>
-              <line x1="6" y1="20" x2="6" y2="14"></line>
-            </svg>
-            Resumen de Inversión
-          </h2>
-          <button id="btnExport" class="btn-export">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Exportar
-          </button>
-        </div>
-        
-        <div class="panel-content">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Instituciones</div>
-              <div class="stat-value" id="countInstituciones">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Inversión Total</div>
-              <div class="stat-value" id="totalInversion">$0</div>
-            </div>
-          </div>
-          
-          <div class="rubros-container">
-            <h3 class="rubros-title">Desglose por Rubro</h3>
-            <table id="rubrosTable" class="rubros-table">
-              <thead>
-                <tr>
-                  <th>Concepto</th>
-                  <th>Monto (USD)</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-              <tfoot>
-                <tr>
-                  <td>Total General</td>
-                  <td id="totalCell">$0.00</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-          
-          <div class="filters-status" id="filtrosActivos">
-            Sin filtros activos
-          </div>
-        </div>
-      </div>
-    </aside>
+    </div>
     
-    <!-- Main Map Area -->
-    <main class="main-content">
-      <header class="map-header">
-        <div class="header-content">
-          <h1 class="map-title">Sistema de Visualización Geográfica Nacional</h1>
-          <p class="map-subtitle">Material Lúdico, Mobiliario y Juegos Exteriores - Equipamiento Educativo</p>
-        </div>
-        <div class="legend">
-          <span class="legend-item">
-            <img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" alt="Costa" class="legend-icon">
-            Costa
-          </span>
-          <span class="legend-item">
-            <img src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" alt="Sierra" class="legend-icon">
-            Sierra
-          </span>
-        </div>
-      </header>
-      <div id="map" class="map-container"></div>
-    </main>
-  </div>
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script src="app.js"></script>
 </body>
 </html>
