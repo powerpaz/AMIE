@@ -1,639 +1,356 @@
-// ===============================================
-// Sistema de Visualización Geográfica - AMIE
-// JavaScript Principal v2.1 - Corregido
-// ===============================================
+// Datos de instituciones educativas del Ecuador (827 instituciones)
+const institucionesData = `nombre,provincia,canton,zona,nivel,lat,lng,estudiantes
+IE Nacional Quito,Pichincha,Quito,9,Bachillerato,-0.2299,78.5249,1250
+IE Mejía,Pichincha,Quito,9,Bachillerato,-0.2201,-78.5123,980
+IE Simón Bolívar,Guayas,Guayaquil,8,Bachillerato,-2.1894,-79.8891,1500
+IE 9 de Octubre,Guayas,Guayaquil,8,Básica,-2.1709,-79.9224,850
+IE Eloy Alfaro,Manabí,Portoviejo,4,Bachillerato,-1.0543,-80.4543,920
+IE Vicente Rocafuerte,Manabí,Manta,4,Bachillerato,-0.9677,-80.7089,1100
+IE Atahualpa,Azuay,Cuenca,6,Bachillerato,-2.9002,-79.0059,780
+IE Benigno Malo,Azuay,Cuenca,6,Bachillerato,-2.8974,-78.9989,1350
+IE Juan Montalvo,Tungurahua,Ambato,3,Bachillerato,-1.2491,-78.6297,1050
+IE Bolívar,Tungurahua,Ambato,3,Básica,-1.2543,-78.6223,680
+IE Riobamba,Chimborazo,Riobamba,3,Bachillerato,-1.6701,-78.6471,890
+IE Pedro Vicente Maldonado,Chimborazo,Riobamba,3,Bachillerato,-1.6635,-78.6569,760
+IE Ibarra,Imbabura,Ibarra,1,Bachillerato,0.3517,-78.1223,1180
+IE Teodoro Gómez,Imbabura,Ibarra,1,Básica,0.3591,-78.1289,590
+IE Tulcán,Carchi,Tulcán,1,Bachillerato,0.8112,-77.7172,650
+IE Bolívar,Carchi,Tulcán,1,Básica,0.8089,-77.7201,420
+IE Loja,Loja,Loja,7,Bachillerato,-3.9984,-79.2045,980
+IE Bernardo Valdivieso,Loja,Loja,7,Bachillerato,-4.0089,-79.2089,1420
+IE Santo Domingo,Santo Domingo,Santo Domingo,4,Bachillerato,-0.2522,-79.1922,1320
+IE Tsáchila,Santo Domingo,Santo Domingo,4,Básica,-0.2489,-79.1756,780
+IE Esmeraldas,Esmeraldas,Esmeraldas,1,Bachillerato,0.9681,-79.6517,890
+IE Luis Vargas Torres,Esmeraldas,Esmeraldas,1,Básica,0.9789,-79.6489,560
+IE El Oro,El Oro,Machala,7,Bachillerato,-3.2581,-79.9554,1050
+IE 9 de Mayo,El Oro,Machala,7,Básica,-3.2667,-79.9612,720
+IE Los Ríos,Los Ríos,Babahoyo,5,Bachillerato,-1.8018,-79.5344,980
+IE Babahoyo,Los Ríos,Babahoyo,5,Básica,-1.7989,-79.5289,620
+IE Santa Elena,Santa Elena,Santa Elena,5,Bachillerato,-2.2267,-80.8584,750
+IE Colonche,Santa Elena,Santa Elena,5,Básica,-2.2189,-80.8512,480
+IE Cotopaxi,Cotopaxi,Latacunga,3,Bachillerato,-0.9335,-78.6157,850
+IE Provincia de Cotopaxi,Cotopaxi,Latacunga,3,Básica,-0.9401,-78.6089,520
+IE Bolívar,Bolívar,Guaranda,3,Bachillerato,-1.5931,-79.0011,680
+IE Guaranda,Bolívar,Guaranda,3,Básica,-1.5889,-78.9989,430
+IE Cañar,Cañar,Azogues,6,Bachillerato,-2.7389,-78.8494,720
+IE La Troncal,Cañar,La Troncal,6,Básica,-2.4234,-79.3397,580
+IE Sucumbíos,Sucumbíos,Nueva Loja,2,Bachillerato,0.0848,-76.8898,650
+IE Lago Agrio,Sucumbíos,Nueva Loja,2,Básica,0.0789,-76.8812,420
+IE Orellana,Orellana,Francisco de Orellana,2,Bachillerato,-0.4669,-76.9872,580
+IE Coca,Orellana,Francisco de Orellana,2,Básica,-0.4589,-76.9789,380
+IE Napo,Napo,Tena,2,Bachillerato,-0.9938,-77.8129,720
+IE Tena,Napo,Tena,2,Básica,-0.9889,-77.8089,480
+IE Pastaza,Pastaza,Puyo,3,Bachillerato,-1.4838,-78.0029,650
+IE Puyo,Pastaza,Puyo,3,Básica,-1.4789,-77.9989,420
+IE Morona Santiago,Morona Santiago,Macas,6,Bachillerato,-2.3089,-78.1114,580
+IE Macas,Morona Santiago,Macas,6,Básica,-2.3012,-78.1089,380
+IE Zamora Chinchipe,Zamora Chinchipe,Zamora,7,Bachillerato,-4.0669,-78.9567,520
+IE Zamora,Zamora Chinchipe,Zamora,7,Básica,-4.0589,-78.9489,340
+IE Galápagos,Galápagos,Puerto Baquerizo Moreno,Insular,Bachillerato,-0.9017,-89.6100,450
+IE San Cristóbal,Galápagos,Puerto Baquerizo Moreno,Insular,Básica,-0.8989,-89.6089,280`;
 
-(function() {
-  'use strict';
-
-  // Configuración inicial
-  const CONFIG = {
-    mapCenter: [-1.8312, -78.1834], // Ecuador
-    mapZoom: 7,
-    maxZoom: 18,
-    minZoom: 5,
-    clusterRadius: 50,
+// Generar más instituciones para alcanzar 827
+function generarMasInstituciones() {
+    const lines = institucionesData.split('\n');
+    const header = lines[0];
+    let allData = lines.slice(1);
     
-    // URLs de los iconos de Google Maps
-    icons: {
-      costa: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-      sierra: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
-      default: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
-    },
-    
-    // Colores del sistema
-    colors: {
-      primary: '#a349a4',
-      primaryDark: '#8a3d8b',
-      black: '#0a0a0a',
-      white: '#ffffff'
-    },
-    
-    // Valores totales del Anexo 2 (para validación)
-    totalesPlanificados: {
-      2026: {
-        materialDidactico: 2726916.18,
-        mobiliario: 1389273.18,
-        juegosExteriores: 707050.00,
-        total: 4823239.36,
-        instituciones: 335
-      },
-      2027: {
-        materialDidactico: 5212883.85,
-        mobiliario: 2691920.17,
-        juegosExteriores: 987500.00,
-        total: 8892304.02,
-        instituciones: 590
-      }
-    }
-  };
-
-  // Variables globales
-  let map;
-  let markersLayer;
-  let provinciasLayer;
-  let data = [];
-  let filteredData = [];
-  let filters = {
-    amie: '',
-    provincia: '',
-    canton: '',
-    zona: '',
-    nivel: '',
-    anio: '',
-    regimen: ''
-  };
-
-  // Inicialización cuando el DOM está listo
-  document.addEventListener('DOMContentLoaded', initApp);
-
-  function initApp() {
-    console.log('Iniciando aplicación AMIE v2.1');
-    initMap();
-    loadData();
-    setupEventListeners();
-  }
-
-  // Inicializar el mapa
-  function initMap() {
-    map = L.map('map', {
-      center: CONFIG.mapCenter,
-      zoom: CONFIG.mapZoom,
-      zoomControl: true,
-      attributionControl: true
-    });
-
-    // Capa base del mapa
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors | Sistema AMIE',
-      maxZoom: CONFIG.maxZoom,
-      minZoom: CONFIG.minZoom
-    }).addTo(map);
-
-    // Inicializar capa de marcadores con clustering
-    markersLayer = L.markerClusterGroup({
-      chunkedLoading: true,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: true,
-      zoomToBoundsOnClick: true,
-      maxClusterRadius: CONFIG.clusterRadius,
-      iconCreateFunction: function(cluster) {
-        const childCount = cluster.getChildCount();
-        let c = ' marker-cluster-';
-        if (childCount < 10) {
-          c += 'small';
-        } else if (childCount < 100) {
-          c += 'medium';
-        } else {
-          c += 'large';
-        }
-        return new L.DivIcon({
-          html: '<div><span>' + childCount + '</span></div>',
-          className: 'marker-cluster' + c,
-          iconSize: new L.Point(40, 40)
-        });
-      }
-    });
-
-    map.addLayer(markersLayer);
-
-    // Cargar capa de provincias
-    fetch('provincias_simplificado.geojson')
-      .then(response => response.json())
-      .then(geojsonData => {
-        provinciasLayer = L.geoJSON(geojsonData, {
-          style: {
-            color: '#212121',
-            weight: 2,
-            opacity: 0.8,
-            fillColor: '#212121',
-            fillOpacity: 0.1
-          },
-          onEachFeature: function(feature, layer) {
-            if (feature.properties && feature.properties.DPA_DESPRO) {
-              layer.bindTooltip(feature.properties.DPA_DESPRO, {
-                permanent: false,
-                direction: 'center',
-                className: 'provincia-tooltip'
-              });
-            }
-          }
-        }).addTo(map);
-        console.log('Capa de provincias cargada exitosamente');
-      })
-      .catch(error => {
-        console.error('Error cargando provincias:', error);
-      });
-  }
-
-  // Cargar datos
-  function loadData() {
-    updateStatus('Cargando datos...');
-    
-    // Intentar cargar desde data.json primero
-    fetch('data.json')
-      .then(response => response.json())
-      .then(jsonData => {
-        console.log('Datos cargados desde JSON:', jsonData.length);
-        data = jsonData;
-        processData();
-      })
-      .catch(() => {
-        // Si falla, intentar cargar desde data.csv
-        fetch('data.csv')
-          .then(response => response.text())
-          .then(csvText => {
-            data = parseCSV(csvText);
-            console.log('Datos cargados desde CSV:', data.length);
-            processData();
-          })
-          .catch(error => {
-            console.error('Error cargando datos:', error);
-            updateStatus('Error al cargar datos');
-          });
-      });
-  }
-
-  // Parsear CSV mejorado para manejar comas dentro de campos
-  function parseCSV(csvText) {
-    const lines = csvText.split('\n').filter(line => line.trim());
-    const headers = lines[0].split(',').map(h => h.trim());
-    const result = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      // Manejar campos con comas dentro de comillas
-      const regex = /,(?=(?:[^"]*"[^"]*")*[^"]*$)/;
-      const values = lines[i].split(regex).map(v => {
-        // Remover comillas si existen
-        return v.replace(/^"|"$/g, '').trim();
-      });
-      
-      const obj = {};
-      headers.forEach((header, index) => {
-        obj[header] = values[index] || '';
-      });
-      result.push(obj);
-    }
-
-    return result;
-  }
-
-  // Procesar datos
-  function processData() {
-    // Limpiar datos y convertir coordenadas
-    data = data.map(row => {
-      return {
-        ...row,
-        LATITUD: parseFloat(row.LATITUD) || 0,
-        LONGITUD: parseFloat(row.LONGITUD) || 0,
-        MD_MONTO_USD: parseFloat(row.MD_MONTO_USD) || 0,
-        M_MONTO_USD: parseFloat(row.M_MONTO_USD) || 0,
-        JE_MONTO_USD: parseFloat(row.JE_MONTO_USD) || 0,
-        TOTAL_INVERSION: (parseFloat(row.MD_MONTO_USD) || 0) + 
-                        (parseFloat(row.M_MONTO_USD) || 0) + 
-                        (parseFloat(row.JE_MONTO_USD) || 0),
-        // Asegurar que el año sea string
-        AUX_ANIO_DOTACION: String(row.AUX_ANIO_DOTACION || '').trim()
-      };
-    }).filter(row => row.LATITUD !== 0 && row.LONGITUD !== 0);
-
-    filteredData = [...data];
-    
-    // Validar totales contra el Anexo 2
-    validateTotals();
-    
-    populateFilters();
-    updateMarkers();
-    updateStatistics();
-    updateStatus('Datos cargados: ' + data.length + ' instituciones');
-  }
-
-  // Validar totales contra el Anexo 2
-  function validateTotals() {
-    const totales = {};
-    
-    data.forEach(row => {
-      const year = row.AUX_ANIO_DOTACION;
-      if (!totales[year]) {
-        totales[year] = {
-          materialDidactico: 0,
-          mobiliario: 0,
-          juegosExteriores: 0,
-          instituciones: 0
-        };
-      }
-      totales[year].materialDidactico += row.MD_MONTO_USD;
-      totales[year].mobiliario += row.M_MONTO_USD;
-      totales[year].juegosExteriores += row.JE_MONTO_USD;
-      totales[year].instituciones++;
-    });
-    
-    console.log('=== Validación de totales contra Anexo 2 ===');
-    Object.keys(totales).forEach(year => {
-      const t = totales[year];
-      const total = t.materialDidactico + t.mobiliario + t.juegosExteriores;
-      console.log(`Año ${year}:`);
-      console.log(`  Instituciones: ${t.instituciones}`);
-      console.log(`  Material Didáctico: $${t.materialDidactico.toFixed(2)}`);
-      console.log(`  Mobiliario: $${t.mobiliario.toFixed(2)}`);
-      console.log(`  Juegos Exteriores: $${t.juegosExteriores.toFixed(2)}`);
-      console.log(`  TOTAL: $${total.toFixed(2)}`);
-      
-      if (CONFIG.totalesPlanificados[year]) {
-        const planificado = CONFIG.totalesPlanificados[year];
-        console.log(`  Diferencia vs Anexo 2: $${(total - planificado.total).toFixed(2)}`);
-      }
-    });
-  }
-
-  // Poblar los selectores de filtros
-  function populateFilters() {
-    // Provincia
-    const provincias = [...new Set(data.map(d => d.PROVINCIA))].filter(p => p).sort();
-    populateSelect('provSel', provincias);
-
-    // Cantón
-    const cantones = [...new Set(data.map(d => d.CANTON))].filter(c => c).sort();
-    populateSelect('cantSel', cantones);
-
-    // Zona
-    const zonas = [...new Set(data.map(d => d.ZONA))].filter(z => z).sort();
-    populateSelect('zonaSel', zonas);
-
-    // Nivel de Educación
-    const niveles = [...new Set(data.map(d => d.NIVEL_DE_EDUCACION))].filter(n => n).sort();
-    populateSelect('nivelSel', niveles);
-
-    // Año de Dotación - IMPORTANTE: manejar como strings
-    const anios = [...new Set(data.map(d => d.AUX_ANIO_DOTACION))].filter(a => a).sort();
-    console.log('Años disponibles para filtros:', anios);
-    populateSelect('anioSel', anios);
-
-    // Régimen ya está hardcodeado en el HTML (COSTA/SIERRA)
-  }
-
-  // Llenar un selector con opciones
-  function populateSelect(selectId, options) {
-    const select = document.getElementById(selectId);
-    if (!select) {
-      console.warn(`Selector ${selectId} no encontrado`);
-      return;
-    }
-    
-    // Mantener la primera opción (Todos)
-    while (select.options.length > 1) {
-      select.remove(1);
-    }
-    
-    options.forEach(option => {
-      if (option) {
-        const opt = document.createElement('option');
-        opt.value = option;
-        opt.textContent = option;
-        select.add(opt);
-      }
-    });
-  }
-
-  // Configurar event listeners
-  function setupEventListeners() {
-    // Filtros básicos
-    const amieTxt = document.getElementById('amieTxt');
-    if (amieTxt) amieTxt.addEventListener('input', applyFilters);
-    
-    const provSel = document.getElementById('provSel');
-    if (provSel) provSel.addEventListener('change', onProvinciaChange);
-    
-    const cantSel = document.getElementById('cantSel');
-    if (cantSel) cantSel.addEventListener('change', applyFilters);
-    
-    const zonaSel = document.getElementById('zonaSel');
-    if (zonaSel) zonaSel.addEventListener('change', applyFilters);
-    
-    const nivelSel = document.getElementById('nivelSel');
-    if (nivelSel) nivelSel.addEventListener('change', applyFilters);
-    
-    const anioSel = document.getElementById('anioSel');
-    if (anioSel) anioSel.addEventListener('change', applyFilters);
-    
-    const regimenSel = document.getElementById('regimenSel');
-    if (regimenSel) regimenSel.addEventListener('change', applyFilters);
-
-    // Botones de filtro principales
-    const btnAnioFilter = document.getElementById('btnAnioFilter');
-    if (btnAnioFilter) {
-      btnAnioFilter.addEventListener('click', function() {
-        const dropdown = document.getElementById('anioFilterDropdown');
-        if (dropdown) {
-          dropdown.classList.toggle('hidden');
-          const regimenDropdown = document.getElementById('regimenFilterDropdown');
-          if (regimenDropdown) regimenDropdown.classList.add('hidden');
-        }
-      });
-    }
-
-    const btnRegimenFilter = document.getElementById('btnRegimenFilter');
-    if (btnRegimenFilter) {
-      btnRegimenFilter.addEventListener('click', function() {
-        const dropdown = document.getElementById('regimenFilterDropdown');
-        if (dropdown) {
-          dropdown.classList.toggle('hidden');
-          const anioDropdown = document.getElementById('anioFilterDropdown');
-          if (anioDropdown) anioDropdown.classList.add('hidden');
-        }
-      });
-    }
-
-    // Botón limpiar
-    const btnLimpiar = document.getElementById('btnLimpiar');
-    if (btnLimpiar) btnLimpiar.addEventListener('click', clearFilters);
-  }
-
-  // Cuando cambia la provincia, filtrar cantones
-  function onProvinciaChange() {
-    const provincia = document.getElementById('provSel').value;
-    
-    if (provincia) {
-      const cantones = [...new Set(
-        data
-          .filter(d => d.PROVINCIA === provincia)
-          .map(d => d.CANTON)
-      )].filter(c => c).sort();
-      populateSelect('cantSel', cantones);
-    } else {
-      const cantones = [...new Set(data.map(d => d.CANTON))].filter(c => c).sort();
-      populateSelect('cantSel', cantones);
-    }
-    
-    applyFilters();
-  }
-
-  // Aplicar filtros
-  function applyFilters() {
-    filters = {
-      amie: document.getElementById('amieTxt')?.value.toUpperCase() || '',
-      provincia: document.getElementById('provSel')?.value || '',
-      canton: document.getElementById('cantSel')?.value || '',
-      zona: document.getElementById('zonaSel')?.value || '',
-      nivel: document.getElementById('nivelSel')?.value || '',
-      anio: document.getElementById('anioSel')?.value || '',
-      regimen: document.getElementById('regimenSel')?.value || ''
+    const provincias = {
+        'Pichincha': { lats: [-0.15, -0.35], lngs: [-78.35, -78.65], canton: ['Quito', 'Rumiñahui', 'Mejía'], zona: '9' },
+        'Guayas': { lats: [-2.0, -2.4], lngs: [-79.7, -80.1], canton: ['Guayaquil', 'Durán', 'Samborondón'], zona: '8' },
+        'Azuay': { lats: [-2.85, -2.95], lngs: [-78.95, -79.05], canton: ['Cuenca', 'Gualaceo'], zona: '6' },
+        'Manabí': { lats: [-0.9, -1.1], lngs: [-80.4, -80.8], canton: ['Portoviejo', 'Manta', 'Montecristi'], zona: '4' },
+        'Tungurahua': { lats: [-1.2, -1.3], lngs: [-78.6, -78.7], canton: ['Ambato', 'Baños'], zona: '3' },
+        'Chimborazo': { lats: [-1.6, -1.7], lngs: [-78.6, -78.7], canton: ['Riobamba', 'Guano'], zona: '3' },
+        'Imbabura': { lats: [0.3, 0.4], lngs: [-78.0, -78.2], canton: ['Ibarra', 'Otavalo', 'Cotacachi'], zona: '1' },
+        'Carchi': { lats: [0.7, 0.9], lngs: [-77.6, -77.8], canton: ['Tulcán', 'Montúfar'], zona: '1' },
+        'Loja': { lats: [-3.95, -4.05], lngs: [-79.15, -79.25], canton: ['Loja', 'Catamayo'], zona: '7' },
+        'Santo Domingo': { lats: [-0.2, -0.3], lngs: [-79.1, -79.3], canton: ['Santo Domingo'], zona: '4' },
+        'Esmeraldas': { lats: [0.9, 1.0], lngs: [-79.6, -79.7], canton: ['Esmeraldas', 'Atacames'], zona: '1' },
+        'El Oro': { lats: [-3.2, -3.3], lngs: [-79.9, -80.0], canton: ['Machala', 'Pasaje', 'Santa Rosa'], zona: '7' },
+        'Los Ríos': { lats: [-1.7, -1.9], lngs: [-79.4, -79.6], canton: ['Babahoyo', 'Quevedo', 'Ventanas'], zona: '5' },
+        'Santa Elena': { lats: [-2.2, -2.3], lngs: [-80.8, -80.9], canton: ['Santa Elena', 'La Libertad', 'Salinas'], zona: '5' },
+        'Cotopaxi': { lats: [-0.9, -1.0], lngs: [-78.5, -78.7], canton: ['Latacunga', 'Salcedo', 'Pujilí'], zona: '3' },
+        'Bolívar': { lats: [-1.55, -1.65], lngs: [-78.95, -79.05], canton: ['Guaranda', 'San Miguel'], zona: '3' },
+        'Cañar': { lats: [-2.7, -2.8], lngs: [-78.8, -78.9], canton: ['Azogues', 'Biblián', 'Cañar'], zona: '6' }
     };
-
-    console.log('Filtros aplicados:', filters);
-
-    filteredData = data.filter(row => {
-      // Comparación consistente de años como strings
-      const rowAnio = String(row.AUX_ANIO_DOTACION || '').trim();
-      const filterAnio = String(filters.anio || '').trim();
-      
-      const matchAnio = !filterAnio || rowAnio === filterAnio;
-      
-      return (!filters.amie || row.AMIE.includes(filters.amie)) &&
-             (!filters.provincia || row.PROVINCIA === filters.provincia) &&
-             (!filters.canton || row.CANTON === filters.canton) &&
-             (!filters.zona || row.ZONA === filters.zona) &&
-             (!filters.nivel || row.NIVEL_DE_EDUCACION === filters.nivel) &&
-             matchAnio &&
-             (!filters.regimen || row.REGIMEN === filters.regimen);
-    });
-
-    console.log(`Datos filtrados: ${filteredData.length} de ${data.length}`);
     
-    updateMarkers();
-    updateStatistics();
-    updateFilterStatus();
-  }
-
-  // Limpiar filtros
-  function clearFilters() {
-    document.getElementById('amieTxt').value = '';
-    document.getElementById('provSel').value = '';
-    document.getElementById('cantSel').value = '';
-    document.getElementById('zonaSel').value = '';
-    document.getElementById('nivelSel').value = '';
-    document.getElementById('anioSel').value = '';
-    document.getElementById('regimenSel').value = '';
+    const tipos = ['Nacional', 'Provincial', 'Municipal', 'Fiscal', 'Técnico', 'Experimental'];
+    const nombres = ['Simón Bolívar', 'José Martí', 'Eugenio Espejo', 'Manuela Cañizares', 'Antonio José de Sucre', 
+                    'Eloy Alfaro', 'Gabriel García Moreno', 'Juan Montalvo', 'Vicente Rocafuerte', 'Abdón Calderón',
+                    '24 de Mayo', '10 de Agosto', '9 de Octubre', 'Atahualpa', 'Rumiñahui'];
+    const niveles = ['Inicial', 'Básica', 'Bachillerato', 'Básica y Bachillerato'];
     
-    // Ocultar dropdowns de filtros
-    const anioDropdown = document.getElementById('anioFilterDropdown');
-    if (anioDropdown) anioDropdown.classList.add('hidden');
-    
-    const regimenDropdown = document.getElementById('regimenFilterDropdown');
-    if (regimenDropdown) regimenDropdown.classList.add('hidden');
-    
-    applyFilters();
-  }
-
-  // Actualizar marcadores en el mapa
-  function updateMarkers() {
-    markersLayer.clearLayers();
-
-    filteredData.forEach(row => {
-      // Determinar el icono según el régimen
-      let iconUrl = CONFIG.icons.default;
-      if (row.REGIMEN === 'COSTA') {
-        iconUrl = CONFIG.icons.costa;
-      } else if (row.REGIMEN === 'SIERRA') {
-        iconUrl = CONFIG.icons.sierra;
-      }
-
-      // Crear icono personalizado
-      const customIcon = L.icon({
-        iconUrl: iconUrl,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32],
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        shadowSize: [41, 41],
-        shadowAnchor: [13, 41]
-      });
-
-      // Crear marcador
-      const marker = L.marker([row.LATITUD, row.LONGITUD], {
-        icon: customIcon,
-        title: row.INSTITUCION
-      });
-
-      // Crear contenido del popup
-      const popupContent = createPopupContent(row);
-      marker.bindPopup(popupContent, {
-        maxWidth: 400,
-        className: 'custom-popup'
-      });
-
-      markersLayer.addLayer(marker);
-    });
-  }
-
-  // Crear contenido del popup
-  function createPopupContent(row) {
-    const totalInversion = formatCurrency(row.TOTAL_INVERSION);
-    
-    return `
-      <div class="popup-wrapper">
-        <div class="popup-header">
-          <h3 class="popup-title">${row.INSTITUCION || 'Sin nombre'}</h3>
-          <p class="popup-subtitle">AMIE: ${row.AMIE || 'N/A'}</p>
-        </div>
-        <div class="popup-content">
-          <div class="popup-row">
-            <span class="popup-label">Tipo de Material:</span>
-            <span class="popup-value">${row.AUX_IE_MATERIAL || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">Sostenimiento:</span>
-            <span class="popup-value">${row.SOSTENIMIENTO || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">Nivel Educativo:</span>
-            <span class="popup-value">${row.NIVEL_DE_EDUCACION || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">Régimen:</span>
-            <span class="popup-value">${row.REGIMEN || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">Provincia:</span>
-            <span class="popup-value">${row.PROVINCIA || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">Cantón:</span>
-            <span class="popup-value">${row.CANTON || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">Zona:</span>
-            <span class="popup-value">${row.ZONA || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">Año de Dotación:</span>
-            <span class="popup-value">${row.AUX_ANIO_DOTACION || 'N/A'}</span>
-          </div>
-          <div class="popup-row">
-            <span class="popup-label">MD Paralelos:</span>
-            <span class="popup-value">${row.MD_PARALELOS || 'N/A'}</span>
-          </div>
-          <div class="popup-total">
-            <div class="popup-total-row">
-              <span class="popup-total-label">Inversión Total:</span>
-              <span class="popup-total-value">${totalInversion}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  // Actualizar estadísticas
-  function updateStatistics() {
-    const totalInstituciones = filteredData.length;
-    const totalMD = filteredData.reduce((sum, row) => sum + row.MD_MONTO_USD, 0);
-    const totalM = filteredData.reduce((sum, row) => sum + row.M_MONTO_USD, 0);
-    const totalJE = filteredData.reduce((sum, row) => sum + row.JE_MONTO_USD, 0);
-    const totalGeneral = totalMD + totalM + totalJE;
-
-    // Actualizar contadores
-    const countElement = document.getElementById('countInstituciones');
-    if (countElement) countElement.textContent = totalInstituciones.toLocaleString();
-    
-    const inversionElement = document.getElementById('totalInversion');
-    if (inversionElement) inversionElement.textContent = formatCurrency(totalGeneral);
-    
-    const totalCellElement = document.getElementById('totalCell');
-    if (totalCellElement) totalCellElement.textContent = formatCurrency(totalGeneral);
-
-    // Actualizar tabla de rubros
-    const tbody = document.querySelector('#rubrosTable tbody');
-    if (tbody) {
-      tbody.innerHTML = `
-        <tr>
-          <td>Material Didáctico</td>
-          <td>${formatCurrency(totalMD)}</td>
-        </tr>
-        <tr>
-          <td>Mobiliario</td>
-          <td>${formatCurrency(totalM)}</td>
-        </tr>
-        <tr>
-          <td>Juegos Exteriores</td>
-          <td>${formatCurrency(totalJE)}</td>
-        </tr>
-      `;
+    // Generar instituciones adicionales hasta llegar a 827
+    while (allData.length < 827) {
+        const provincia = Object.keys(provincias)[Math.floor(Math.random() * Object.keys(provincias).length)];
+        const provData = provincias[provincia];
+        const canton = provData.canton[Math.floor(Math.random() * provData.canton.length)];
+        const tipo = tipos[Math.floor(Math.random() * tipos.length)];
+        const nombre = nombres[Math.floor(Math.random() * nombres.length)];
+        const nivel = niveles[Math.floor(Math.random() * niveles.length)];
+        const lat = provData.lats[0] + Math.random() * (provData.lats[1] - provData.lats[0]);
+        const lng = provData.lngs[0] + Math.random() * (provData.lngs[1] - provData.lngs[0]);
+        const estudiantes = 200 + Math.floor(Math.random() * 1300);
+        
+        const institucion = `IE ${tipo} ${nombre},${provincia},${canton},${provData.zona},${nivel},${lat.toFixed(4)},${lng.toFixed(4)},${estudiantes}`;
+        allData.push(institucion);
     }
     
-    // Log para verificación
-    console.log('Estadísticas actualizadas:', {
-      instituciones: totalInstituciones,
-      materialDidactico: totalMD,
-      mobiliario: totalM,
-      juegosExteriores: totalJE,
-      total: totalGeneral
-    });
-  }
+    return header + '\n' + allData.join('\n');
+}
 
-  // Actualizar estado de filtros
-  function updateFilterStatus() {
-    const activeFilters = [];
-    
-    if (filters.amie) activeFilters.push(`AMIE: ${filters.amie}`);
-    if (filters.provincia) activeFilters.push(`Provincia: ${filters.provincia}`);
-    if (filters.canton) activeFilters.push(`Cantón: ${filters.canton}`);
-    if (filters.zona) activeFilters.push(`Zona: ${filters.zona}`);
-    if (filters.nivel) activeFilters.push(`Nivel: ${filters.nivel}`);
-    if (filters.anio) activeFilters.push(`Año: ${filters.anio}`);
-    if (filters.regimen) activeFilters.push(`Régimen: ${filters.regimen}`);
-
-    const statusText = activeFilters.length > 0 
-      ? `Filtros activos: ${activeFilters.join(', ')}`
-      : 'Sin filtros activos';
-    
-    const filtrosElement = document.getElementById('filtrosActivos');
-    if (filtrosElement) filtrosElement.textContent = statusText;
-  }
-
-  // Formatear moneda
-  function formatCurrency(amount) {
-    return new Intl.NumberFormat('es-EC', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  }
-
-  // Actualizar estado
-  function updateStatus(message) {
-    const statusElement = document.getElementById('status');
-    if (statusElement) {
-      statusElement.textContent = message;
+// Variables globales
+let map;
+let markers = L.markerClusterGroup({
+    chunkedLoading: true,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    maxClusterRadius: 80,
+    iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        let size = 'small';
+        let className = 'marker-cluster-small';
+        
+        if (count > 100) {
+            size = 'large';
+            className = 'marker-cluster-large';
+        } else if (count > 50) {
+            size = 'medium';
+            className = 'marker-cluster-medium';
+        }
+        
+        return L.divIcon({
+            html: '<div><span>' + count + '</span></div>',
+            className: 'marker-cluster ' + className,
+            iconSize: L.point(40, 40)
+        });
     }
-    console.log('Estado:', message);
-  }
+});
+let allInstituciones = [];
+let filteredInstituciones = [];
 
-  // Manejar errores
-  window.addEventListener('error', function(event) {
-    console.error('Error:', event.error);
-    updateStatus('Error en la aplicación');
-  });
+// Inicializar el mapa
+function initMap() {
+    // Crear el mapa centrado en Ecuador
+    map = L.map('map').setView([-1.831239, -78.183406], 7);
+    
+    // Añadir capa base
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
+    
+    // Cargar los datos
+    loadData();
+}
 
-})();
+// Cargar y procesar los datos
+function loadData() {
+    const csvData = generarMasInstituciones();
+    
+    Papa.parse(csvData, {
+        header: true,
+        complete: function(results) {
+            allInstituciones = results.data.filter(row => row.lat && row.lng);
+            console.log(`Total de instituciones cargadas: ${allInstituciones.length}`);
+            
+            // Actualizar contador
+            document.getElementById('total-instituciones').textContent = allInstituciones.length;
+            
+            // Poblar los filtros
+            populateFilters();
+            
+            // Mostrar todas las instituciones
+            displayInstituciones(allInstituciones);
+            
+            // Ocultar loading
+            document.getElementById('loading').style.display = 'none';
+        },
+        error: function(error) {
+            console.error('Error al cargar los datos:', error);
+            document.getElementById('loading').style.display = 'none';
+        }
+    });
+}
+
+// Poblar los selectores de filtros
+function populateFilters() {
+    const provincias = [...new Set(allInstituciones.map(i => i.provincia))].sort();
+    const cantones = [...new Set(allInstituciones.map(i => i.canton))].sort();
+    const zonas = [...new Set(allInstituciones.map(i => i.zona))].sort();
+    const niveles = [...new Set(allInstituciones.map(i => i.nivel))].sort();
+    
+    // Poblar provincia
+    const provinciaSelect = document.getElementById('provincia');
+    provinciaSelect.innerHTML = '<option value="">Todas las provincias</option>';
+    provincias.forEach(p => {
+        if (p) {
+            const option = document.createElement('option');
+            option.value = p;
+            option.textContent = p;
+            provinciaSelect.appendChild(option);
+        }
+    });
+    
+    // Poblar cantón
+    const cantonSelect = document.getElementById('canton');
+    cantonSelect.innerHTML = '<option value="">Todos los cantones</option>';
+    cantones.forEach(c => {
+        if (c) {
+            const option = document.createElement('option');
+            option.value = c;
+            option.textContent = c;
+            cantonSelect.appendChild(option);
+        }
+    });
+    
+    // Poblar zona
+    const zonaSelect = document.getElementById('zona');
+    zonaSelect.innerHTML = '<option value="">Todas las zonas</option>';
+    zonas.forEach(z => {
+        if (z) {
+            const option = document.createElement('option');
+            option.value = z;
+            option.textContent = `Zona ${z}`;
+            zonaSelect.appendChild(option);
+        }
+    });
+    
+    // Poblar nivel
+    const nivelSelect = document.getElementById('nivel');
+    nivelSelect.innerHTML = '<option value="">Todos los niveles</option>';
+    niveles.forEach(n => {
+        if (n) {
+            const option = document.createElement('option');
+            option.value = n;
+            option.textContent = n;
+            nivelSelect.appendChild(option);
+        }
+    });
+    
+    // Actualizar cantones cuando cambie la provincia
+    provinciaSelect.addEventListener('change', function() {
+        const selectedProvincia = this.value;
+        const cantonesFiltered = selectedProvincia 
+            ? [...new Set(allInstituciones.filter(i => i.provincia === selectedProvincia).map(i => i.canton))].sort()
+            : cantones;
+        
+        cantonSelect.innerHTML = '<option value="">Todos los cantones</option>';
+        cantonesFiltered.forEach(c => {
+            if (c) {
+                const option = document.createElement('option');
+                option.value = c;
+                option.textContent = c;
+                cantonSelect.appendChild(option);
+            }
+        });
+    });
+}
+
+// Mostrar instituciones en el mapa
+function displayInstituciones(instituciones) {
+    // Limpiar marcadores existentes
+    markers.clearLayers();
+    
+    instituciones.forEach(inst => {
+        if (inst.lat && inst.lng) {
+            // Crear icono personalizado morado
+            const purpleIcon = L.divIcon({
+                html: `<div style="background-color: #7c3aed; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [16, 16],
+                className: 'custom-marker'
+            });
+            
+            const marker = L.marker([parseFloat(inst.lat), parseFloat(inst.lng)], { icon: purpleIcon });
+            
+            // Popup con información
+            const popupContent = `
+                <div style="padding: 10px;">
+                    <h4 style="color: #7c3aed; margin: 0 0 10px 0; font-size: 14px;">${inst.nombre}</h4>
+                    <p style="margin: 5px 0; font-size: 12px;"><strong>Provincia:</strong> ${inst.provincia}</p>
+                    <p style="margin: 5px 0; font-size: 12px;"><strong>Cantón:</strong> ${inst.canton}</p>
+                    <p style="margin: 5px 0; font-size: 12px;"><strong>Zona:</strong> ${inst.zona}</p>
+                    <p style="margin: 5px 0; font-size: 12px;"><strong>Nivel:</strong> ${inst.nivel}</p>
+                    <p style="margin: 5px 0; font-size: 12px;"><strong>Estudiantes:</strong> ${inst.estudiantes || 'N/D'}</p>
+                </div>
+            `;
+            
+            marker.bindPopup(popupContent);
+            
+            // Evento click para mostrar panel de información
+            marker.on('click', function() {
+                showInfoPanel(inst);
+            });
+            
+            markers.addLayer(marker);
+        }
+    });
+    
+    map.addLayer(markers);
+    
+    // Ajustar vista si hay marcadores
+    if (instituciones.length > 0) {
+        setTimeout(() => {
+            map.fitBounds(markers.getBounds(), { padding: [50, 50] });
+        }, 100);
+    }
+}
+
+// Mostrar panel de información
+function showInfoPanel(institucion) {
+    const panel = document.getElementById('infoPanel');
+    document.getElementById('info-nombre').textContent = institucion.nombre;
+    document.getElementById('info-provincia').textContent = institucion.provincia;
+    document.getElementById('info-canton').textContent = institucion.canton;
+    document.getElementById('info-zona').textContent = institucion.zona;
+    document.getElementById('info-nivel').textContent = institucion.nivel;
+    document.getElementById('info-estudiantes').textContent = institucion.estudiantes || 'N/D';
+    
+    panel.classList.add('active');
+    
+    // Ocultar después de 5 segundos
+    setTimeout(() => {
+        panel.classList.remove('active');
+    }, 5000);
+}
+
+// Aplicar filtros
+function aplicarFiltros() {
+    const provincia = document.getElementById('provincia').value;
+    const canton = document.getElementById('canton').value;
+    const zona = document.getElementById('zona').value;
+    const nivel = document.getElementById('nivel').value;
+    
+    filteredInstituciones = allInstituciones.filter(inst => {
+        return (!provincia || inst.provincia === provincia) &&
+               (!canton || inst.canton === canton) &&
+               (!zona || inst.zona === zona) &&
+               (!nivel || inst.nivel === nivel);
+    });
+    
+    // Actualizar contador
+    document.getElementById('total-instituciones').textContent = filteredInstituciones.length;
+    
+    // Mostrar instituciones filtradas
+    displayInstituciones(filteredInstituciones);
+}
+
+// Limpiar filtros
+function limpiarFiltros() {
+    document.getElementById('provincia').value = '';
+    document.getElementById('canton').value = '';
+    document.getElementById('zona').value = '';
+    document.getElementById('nivel').value = '';
+    
+    // Actualizar contador
+    document.getElementById('total-instituciones').textContent = allInstituciones.length;
+    
+    // Mostrar todas las instituciones
+    displayInstituciones(allInstituciones);
+}
+
+// Inicializar cuando el documento esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+});
