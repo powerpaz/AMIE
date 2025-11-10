@@ -51,6 +51,7 @@
   // Variables globales
   let map;
   let markersLayer;
+  let provinciasLayer;
   let data = [];
   let filteredData = [];
   let filters = {
@@ -115,6 +116,34 @@
     });
 
     map.addLayer(markersLayer);
+
+    // Cargar capa de provincias
+    fetch('provincias_simplificado.geojson')
+      .then(response => response.json())
+      .then(geojsonData => {
+        provinciasLayer = L.geoJSON(geojsonData, {
+          style: {
+            color: '#81b71a',
+            weight: 2,
+            opacity: 0.8,
+            fillColor: '#81b71a',
+            fillOpacity: 0.1
+          },
+          onEachFeature: function(feature, layer) {
+            if (feature.properties && feature.properties.DPA_DESPRO) {
+              layer.bindTooltip(feature.properties.DPA_DESPRO, {
+                permanent: false,
+                direction: 'center',
+                className: 'provincia-tooltip'
+              });
+            }
+          }
+        }).addTo(map);
+        console.log('Capa de provincias cargada exitosamente');
+      })
+      .catch(error => {
+        console.error('Error cargando provincias:', error);
+      });
   }
 
   // Cargar datos
@@ -338,10 +367,6 @@
     // Botón limpiar
     const btnLimpiar = document.getElementById('btnLimpiar');
     if (btnLimpiar) btnLimpiar.addEventListener('click', clearFilters);
-
-    // Botón exportar
-    const btnExport = document.getElementById('btnExport');
-    if (btnExport) btnExport.addEventListener('click', exportData);
   }
 
   // Cuando cambia la provincia, filtrar cantones
@@ -504,6 +529,10 @@
             <span class="popup-label">Año de Dotación:</span>
             <span class="popup-value">${row.AUX_ANIO_DOTACION || 'N/A'}</span>
           </div>
+          <div class="popup-row">
+            <span class="popup-label">MD Paralelos:</span>
+            <span class="popup-value">${row.MD_PARALELOS || 'N/A'}</span>
+          </div>
           <div class="popup-total">
             <div class="popup-total-row">
               <span class="popup-total-label">Inversión Total:</span>
@@ -580,58 +609,6 @@
     
     const filtrosElement = document.getElementById('filtrosActivos');
     if (filtrosElement) filtrosElement.textContent = statusText;
-  }
-
-  // Exportar datos a CSV
-  function exportData() {
-    if (filteredData.length === 0) {
-      alert('No hay datos para exportar');
-      return;
-    }
-
-    const headers = [
-      'AMIE', 'INSTITUCION', 'AUX_IE_MATERIAL', 'SOSTENIMIENTO', 
-      'NIVEL_DE_EDUCACION', 'REGIMEN', 'PROVINCIA', 'CANTON', 
-      'ZONA', 'AUX_ANIO_DOTACION', 'INVERSION_TOTAL', 
-      'MD_MONTO_USD', 'M_MONTO_USD', 'JE_MONTO_USD'
-    ];
-
-    let csvContent = headers.join(',') + '\n';
-
-    filteredData.forEach(row => {
-      const rowData = [
-        row.AMIE,
-        '"' + (row.INSTITUCION || '').replace(/"/g, '""') + '"',
-        row.AUX_IE_MATERIAL || '',
-        row.SOSTENIMIENTO || '',
-        row.NIVEL_DE_EDUCACION || '',
-        row.REGIMEN || '',
-        row.PROVINCIA || '',
-        row.CANTON || '',
-        row.ZONA || '',
-        row.AUX_ANIO_DOTACION || '',
-        row.TOTAL_INVERSION.toFixed(2),
-        row.MD_MONTO_USD.toFixed(2),
-        row.M_MONTO_USD.toFixed(2),
-        row.JE_MONTO_USD.toFixed(2)
-      ];
-      csvContent += rowData.join(',') + '\n';
-    });
-
-    // Crear y descargar el archivo
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `datos_amie_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    updateStatus('Datos exportados: ' + filteredData.length + ' registros');
   }
 
   // Formatear moneda

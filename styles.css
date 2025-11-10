@@ -246,26 +246,6 @@ html, body {
   transform: translateY(-1px);
 }
 
-.btn-export {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: 1px solid var(--white);
-  border-radius: var(--border-radius);
-  background-color: rgba(255, 255, 255, 0.2);
-  color: var(--white);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.btn-export:hover {
-  background-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-}
-
 /* Data Source */
 .data-source {
   margin-top: 16px;
