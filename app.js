@@ -23,8 +23,8 @@
     
     // Colores del sistema
     colors: {
-      primary: '#81b71a',
-      primaryDark: '#6b9915',
+      primary: '#a349a4',
+      primaryDark: '#8a3d8b',
       black: '#0a0a0a',
       white: '#ffffff'
     },
@@ -123,10 +123,10 @@
       .then(geojsonData => {
         provinciasLayer = L.geoJSON(geojsonData, {
           style: {
-            color: '#81b71a',
+            color: '#212121',
             weight: 2,
             opacity: 0.8,
-            fillColor: '#81b71a',
+            fillColor: '#212121',
             fillOpacity: 0.1
           },
           onEachFeature: function(feature, layer) {
