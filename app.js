@@ -123,10 +123,10 @@
       .then(geojsonData => {
         provinciasLayer = L.geoJSON(geojsonData, {
           style: {
-            color: '#212121',
+            color: '#81b71a',
             weight: 2,
             opacity: 0.8,
-            fillColor: '#212121',
+            fillColor: '#81b71a',
             fillOpacity: 0.1
           },
           onEachFeature: function(feature, layer) {
