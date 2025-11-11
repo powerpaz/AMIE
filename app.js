@@ -1,6 +1,6 @@
 // ===============================================
 // Sistema de Visualización Geográfica - AMIE
-// JavaScript Principal v2.1 - Corregido
+// JavaScript Principal v2.1 - Corregido (+supercluster +KPI)
 // ===============================================
 
 (function() {
@@ -22,6 +22,14 @@
     return v;
   }
 
+  // === KPI helpers ===
+  function __updateKPI__(loadedTotal, visibleTotal){
+    const t = document.getElementById('kpi-total');
+    const v = document.getElementById('kpi-visible');
+    if (t) t.textContent = String(loadedTotal);
+    if (v) v.textContent = String(visibleTotal);
+    try { console.info('[KPI] Total cargados:', loadedTotal, '| Visibles:', visibleTotal); } catch(e){}
+  }
 
   // Configuración inicial
   const CONFIG = {
@@ -29,7 +37,7 @@
     mapZoom: 7,
     maxZoom: 18,
     minZoom: 5,
-    clusterRadius: 50,
+    clusterRadius: 50, // radio base para zoom alto
     
     // URLs de los iconos de Google Maps
     icons: {
@@ -123,12 +131,17 @@
       .catch(err => console.warn('No se pudo cargar provincias_simplificado.geojson:', err));
 
     // Inicializar capa de marcadores con clustering
+    // Supercluster: 1 solo cluster en zooms lejanos; se desagrega progresivamente
     markersLayer = L.markerClusterGroup({
       chunkedLoading: true,
-      spiderfyOnMaxZoom: true,
+      spiderfyOnMaxZoom: false,
       showCoverageOnHover: true,
       zoomToBoundsOnClick: true,
-      maxClusterRadius: CONFIG.clusterRadius,
+      // En zoom <=5 devolvemos un radio muy grande para forzar un único clúster (p.ej., 827)
+      maxClusterRadius: function (zoom) {
+        return (zoom <= 5) ? 200 : CONFIG.clusterRadius; // 200 px a zoom lejano, 50 px (tu valor) al acercar
+      },
+      disableClusteringAtZoom: 7, // a partir de 7 deja de agrupar
       iconCreateFunction: function(cluster) {
         const childCount = cluster.getChildCount();
         let c = ' marker-cluster-';
@@ -148,6 +161,11 @@
     });
 
     map.addLayer(markersLayer);
+
+    // Actualizar KPI al mover/zoom (visibles = filtrados)
+    map.on('zoomend moveend', () => {
+      __updateKPI__(data.length, filteredData.length);
+    });
   }
 
   // Cargar datos
@@ -203,34 +221,20 @@
   }
 
   // Procesar datos
-  
-function normalizeProvince(name) {
-  if (!name) return '';
-  const s = String(name).trim().toUpperCase();
-  // Correcciones comunes
-  const fixes = {
-    'CARCI': 'CARCHI',
-    'CARHCI': 'CARCHI',
-    'CARCH': 'CARCHI',
-    'TSACHILAS': 'SANTO DOMINGO DE LOS TSACHILAS'
-  };
-  return fixes[s] || s;
-}
-
-function processData() {
+  function processData() {
     // Limpiar datos y convertir coordenadas
     data = data.map(row => {
       return {
         ...row,
-        PROVINCIA: normalizeProvince(row.PROVINCIA),
+        PROVINCIA: __normalizeProvince__(row.PROVINCIA),
         LATITUD: parseFloat(row.LATITUD) || 0,
         LONGITUD: parseFloat(row.LONGITUD) || 0,
         MD_MONTO_USD: parseFloat(row.MD_MONTO_USD) || 0,
         M_MONTO_USD: parseFloat(row.M_MONTO_USD) || 0,
         JE_MONTO_USD: parseFloat(row.JE_MONTO_USD) || 0,
         TOTAL_INVERSION: (parseFloat(row.MD_MONTO_USD) || 0) + 
-                        (parseFloat(row.M_MONTO_USD) || 0) + 
-                        (parseFloat(row.JE_MONTO_USD) || 0),
+                         (parseFloat(row.M_MONTO_USD) || 0) + 
+                         (parseFloat(row.JE_MONTO_USD) || 0),
         // Asegurar que el año sea string
         AUX_ANIO_DOTACION: String(row.AUX_ANIO_DOTACION || '').trim()
       };
@@ -245,6 +249,9 @@ function processData() {
     updateMarkers();
     updateStatistics();
     updateStatus('Datos cargados: ' + data.length + ' instituciones');
+
+    // KPI inicial
+    __updateKPI__(data.length, filteredData.length);
   }
 
   // Validar totales contra el Anexo 2
@@ -395,11 +402,12 @@ function processData() {
   // Cuando cambia la provincia, filtrar cantones
   function onProvinciaChange() {
     const provincia = document.getElementById('provSel').value;
+    const provinciaNorm = __normalizeProvince__(provincia);
     
-    if (provincia) {
+    if (provinciaNorm) {
       const cantones = [...new Set(
         data
-          .filter(d => d.PROVINCIA === provincia)
+          .filter(d => __normalizeProvince__(d.PROVINCIA) === provinciaNorm)
           .map(d => d.CANTON)
       )].filter(c => c).sort();
       populateSelect('cantSel', cantones);
@@ -429,10 +437,9 @@ function processData() {
       // Comparación consistente de años como strings
       const rowAnio = String(row.AUX_ANIO_DOTACION || '').trim();
       const filterAnio = String(filters.anio || '').trim();
-      
       const matchAnio = !filterAnio || rowAnio === filterAnio;
-      
-      return (!filters.amie || row.AMIE.includes(filters.amie)) &&
+
+      return (!filters.amie || String(row.AMIE || '').toUpperCase().includes(filters.amie)) &&
              (!filters.provincia || __normalizeProvince__(row.PROVINCIA) === __normalizeProvince__(filters.provincia)) &&
              (!filters.canton || row.CANTON === filters.canton) &&
              (!filters.zona || row.ZONA === filters.zona) &&
@@ -446,6 +453,7 @@ function processData() {
     updateMarkers();
     updateStatistics();
     updateFilterStatus();
+    __updateKPI__(data.length, filteredData.length);
   }
 
   // Limpiar filtros
@@ -507,6 +515,14 @@ function processData() {
 
       markersLayer.addLayer(marker);
     });
+
+    // Asegura el clúster grande al inicio si estás lejos
+    try {
+      if (filteredData.length > 0) {
+        const b = markersLayer.getBounds();
+        if (b.isValid()) map.fitBounds(b, { maxZoom: CONFIG.minZoom }); // evita acercar demasiado
+      }
+    } catch(e){}
   }
 
   // Crear contenido del popup
