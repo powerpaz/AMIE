@@ -51,6 +51,7 @@
   // Variables globales
   let map;
   let markersLayer;
+  let provinciasLayer;
   let data = [];
   let filteredData = [];
   let filters = {
@@ -115,6 +116,44 @@
     });
 
     map.addLayer(markersLayer);
+
+    // Cargar capa de provincias (GeoJSON)
+    loadProvinciasLayer();
+  }
+
+  // Cargar capa de provincias con bordes negros
+  function loadProvinciasLayer() {
+    fetch('provincias_simplificado.geojson')
+      .then(response => response.json())
+      .then(geojsonData => {
+        console.log('Capa de provincias cargada');
+
+        provinciasLayer = L.geoJSON(geojsonData, {
+          style: {
+            fillColor: 'transparent',
+            fillOpacity: 0,
+            color: '#000000',  // Bordes negros
+            weight: 2,         // Grosor de la línea
+            opacity: 1
+          },
+          onEachFeature: function(feature, layer) {
+            // Agregar tooltip con el nombre de la provincia si está disponible
+            if (feature.properties && feature.properties.DPA_DESPRO) {
+              layer.bindTooltip(feature.properties.DPA_DESPRO, {
+                permanent: false,
+                direction: 'center',
+                className: 'provincia-tooltip'
+              });
+            }
+          }
+        }).addTo(map);
+
+        // Enviar la capa al fondo para que no tape los marcadores
+        provinciasLayer.bringToBack();
+      })
+      .catch(error => {
+        console.error('Error cargando capa de provincias:', error);
+      });
   }
 
   // Cargar datos
