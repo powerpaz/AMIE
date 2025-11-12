@@ -564,15 +564,15 @@
             <span class="popup-label">Zona:</span>
             <span class="popup-value">${row.ZONA || 'N/A'}</span>
           </div>
+            <div class="popup-row">
+            <span class="popup-label">MD Paralelos:</span>
+            <span class="popup-value">${row.MD_PARALELOS || 'N/A'}</span>
+          </div>
           <div class="popup-row">
             <span class="popup-label">Año de Dotación:</span>
             <span class="popup-value">${row.AUX_ANIO_DOTACION || 'N/A'}</span>
           </div>
           <div class="popup-total">
-            <div class="popup-row">
-            <span class="popup-label">MD Paralelos:</span>
-            <span class="popup-value">${row.MD_PARALELOS || 'N/A'}</span>
-          </div>
             <div class="popup-total-row">
               <span class="popup-total-label">Inversión Total:</span>
               <span class="popup-total-value">${totalInversion}</span>
