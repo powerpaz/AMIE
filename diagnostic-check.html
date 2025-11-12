@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico AMIE - Sistema de Verificación</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .check-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .check-section h2 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .check-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .check-item .label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.loading {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .details {
+            margin-top: 10px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #666;
+            border-left: 3px solid #667eea;
+        }
+
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .summary-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            color: white;
+        }
+
+        .summary-card.total {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .summary-card.success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+        }
+
+        .summary-card.error {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        }
+
+        .summary-card .number {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-card .label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Diagnóstico del Sistema AMIE</h1>
+            <p>Verificación completa de archivos, dependencias y configuración</p>
+        </div>
+
+        <div class="content">
+            <div class="summary" id="summary">
+                <div class="summary-card total">
+                    <div class="number" id="totalChecks">-</div>
+                    <div class="label">Verificaciones Totales</div>
+                </div>
+                <div class="summary-card success">
+                    <div class="number" id="passedChecks">-</div>
+                    <div class="label">Correctas</div>
+                </div>
+                <div class="summary-card error">
+                    <div class="number" id="failedChecks">-</div>
+                    <div class="label">Errores</div>
+                </div>
+            </div>
+
+            <div id="results"></div>
+
+            <div class="actions">
+                <button class="btn" onclick="runDiagnostics()">🔄 Ejecutar Diagnóstico</button>
+                <button class="btn" onclick="window.location.href='index.html'" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);">✅ Ir a la Aplicación</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let diagnosticResults = {
+            total: 0,
+            passed: 0,
+            failed: 0,
+            checks: []
+        };
+
+        async function runDiagnostics() {
+            diagnosticResults = { total: 0, passed: 0, failed: 0, checks: [] };
+            document.getElementById('results').innerHTML = '<p style="text-align:center;">Ejecutando diagnóstico...</p>';
+
+            // 1. Verificar archivos críticos
+            await checkFiles();
+
+            // 2. Verificar dependencias externas
+            await checkExternalDependencies();
+
+            // 3. Verificar estructura de datos
+            await checkDataStructure();
+
+            // 4. Verificar JavaScript
+            checkJavaScriptErrors();
+
+            // Mostrar resultados
+            displayResults();
+        }
+
+        async function checkFiles() {
+            const section = {
+                title: '📁 Archivos del Sistema',
+                items: []
+            };
+
+            const requiredFiles = [
+                { path: 'index.html', description: 'Página principal' },
+                { path: 'app.js', description: 'JavaScript principal' },
+                { path: 'config.js', description: 'Configuración' },
+                { path: 'styles.css', description: 'Estilos CSS' },
+                { path: 'data.json', description: 'Datos JSON' },
+                { path: 'data.csv', description: 'Datos CSV (fallback)' },
+                { path: 'logo.png', description: 'Logo institucional' },
+                { path: 'escudo_ecuador.png', description: 'Escudo Ecuador' },
+                { path: 'provincias_simplificado.geojson', description: 'Mapa provincias' }
+            ];
+
+            for (const file of requiredFiles) {
+                try {
+                    const response = await fetch(file.path, { method: 'HEAD' });
+                    const exists = response.ok;
+                    diagnosticResults.total++;
+
+                    section.items.push({
+                        label: `${file.description} (${file.path})`,
+                        status: exists ? 'success' : 'error',
+                        message: exists ? 'Encontrado' : 'No encontrado'
+                    });
+
+                    if (exists) {
+                        diagnosticResults.passed++;
+                    } else {
+                        diagnosticResults.failed++;
+                    }
+                } catch (error) {
+                    diagnosticResults.total++;
+                    diagnosticResults.failed++;
+                    section.items.push({
+                        label: `${file.description} (${file.path})`,
+                        status: 'error',
+                        message: 'Error al verificar: ' + error.message
+                    });
+                }
+            }
+
+            diagnosticResults.checks.push(section);
+        }
+
+        async function checkExternalDependencies() {
+            const section = {
+                title: '🌐 Dependencias Externas',
+                items: []
+            };
+
+            const dependencies = [
+                { url: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', name: 'Leaflet CSS' },
+                { url: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', name: 'Leaflet JS' },
+                { url: 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js', name: 'MarkerCluster JS' },
+                { url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap', name: 'Google Fonts' }
+            ];
+
+            for (const dep of dependencies) {
+                try {
+                    const response = await fetch(dep.url, { method: 'HEAD' });
+                    const available = response.ok;
+                    diagnosticResults.total++;
+
+                    section.items.push({
+                        label: dep.name,
+                        status: available ? 'success' : 'error',
+                        message: available ? 'Disponible' : 'No disponible'
+                    });
+
+                    if (available) {
+                        diagnosticResults.passed++;
+                    } else {
+                        diagnosticResults.failed++;
+                    }
+                } catch (error) {
+                    diagnosticResults.total++;
+                    diagnosticResults.failed++;
+                    section.items.push({
+                        label: dep.name,
+                        status: 'error',
+                        message: 'Error de red: ' + error.message
+                    });
+                }
+            }
+
+            diagnosticResults.checks.push(section);
+        }
+
+        async function checkDataStructure() {
+            const section = {
+                title: '💾 Estructura de Datos',
+                items: []
+            };
+
+            try {
+                const response = await fetch('data.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    diagnosticResults.total++;
+
+                    if (Array.isArray(data) && data.length > 0) {
+                        diagnosticResults.passed++;
+                        section.items.push({
+                            label: 'Archivo data.json',
+                            status: 'success',
+                            message: `✓ Cargado correctamente: ${data.length} registros`
+                        });
+
+                        // Verificar estructura de datos
+                        const firstRow = data[0];
+                        const requiredFields = ['AMIE', 'INSTITUCION', 'PROVINCIA', 'LATITUD', 'LONGITUD'];
+                        const missingFields = requiredFields.filter(field => !(field in firstRow));
+
+                        diagnosticResults.total++;
+                        if (missingFields.length === 0) {
+                            diagnosticResults.passed++;
+                            section.items.push({
+                                label: 'Campos requeridos',
+                                status: 'success',
+                                message: 'Todos los campos necesarios están presentes'
+                            });
+                        } else {
+                            diagnosticResults.failed++;
+                            section.items.push({
+                                label: 'Campos requeridos',
+                                status: 'error',
+                                message: `Campos faltantes: ${missingFields.join(', ')}`
+                            });
+                        }
+
+                        // Verificar coordenadas válidas
+                        diagnosticResults.total++;
+                        const validCoords = data.filter(row =>
+                            typeof row.LATITUD === 'number' &&
+                            typeof row.LONGITUD === 'number' &&
+                            row.LATITUD !== 0 &&
+                            row.LONGITUD !== 0
+                        ).length;
+
+                        if (validCoords === data.length) {
+                            diagnosticResults.passed++;
+                            section.items.push({
+                                label: 'Coordenadas geográficas',
+                                status: 'success',
+                                message: `✓ ${validCoords} registros con coordenadas válidas`
+                            });
+                        } else {
+                            diagnosticResults.failed++;
+                            section.items.push({
+                                label: 'Coordenadas geográficas',
+                                status: 'warning',
+                                message: `⚠ ${validCoords}/${data.length} registros con coordenadas válidas`
+                            });
+                        }
+
+                    } else {
+                        diagnosticResults.failed++;
+                        section.items.push({
+                            label: 'Archivo data.json',
+                            status: 'error',
+                            message: 'El archivo está vacío o no contiene un array'
+                        });
+                    }
+                } else {
+                    diagnosticResults.total++;
+                    diagnosticResults.failed++;
+                    section.items.push({
+                        label: 'Archivo data.json',
+                        status: 'error',
+                        message: `Error HTTP: ${response.status}`
+                    });
+                }
+            } catch (error) {
+                diagnosticResults.total++;
+                diagnosticResults.failed++;
+                section.items.push({
+                    label: 'Archivo data.json',
+                    status: 'error',
+                    message: 'Error al cargar: ' + error.message
+                });
+            }
+
+            diagnosticResults.checks.push(section);
+        }
+
+        function checkJavaScriptErrors() {
+            const section = {
+                title: '⚙️ JavaScript y Configuración',
+                items: []
+            };
+
+            // Verificar que Leaflet se cargará
+            diagnosticResults.total++;
+            if (typeof L !== 'undefined') {
+                diagnosticResults.passed++;
+                section.items.push({
+                    label: 'Librería Leaflet',
+                    status: 'success',
+                    message: 'Leaflet está cargado correctamente'
+                });
+            } else {
+                diagnosticResults.failed++;
+                section.items.push({
+                    label: 'Librería Leaflet',
+                    status: 'warning',
+                    message: 'Leaflet aún no está cargado (se cargará en index.html)'
+                });
+            }
+
+            // Verificar configuración
+            diagnosticResults.total++;
+            if (typeof window.APP_CONFIG !== 'undefined') {
+                diagnosticResults.passed++;
+                section.items.push({
+                    label: 'Configuración APP_CONFIG',
+                    status: 'success',
+                    message: 'Configuración disponible'
+                });
+            } else {
+                diagnosticResults.failed++;
+                section.items.push({
+                    label: 'Configuración APP_CONFIG',
+                    status: 'warning',
+                    message: 'Configuración no encontrada (se cargará en index.html)'
+                });
+            }
+
+            diagnosticResults.checks.push(section);
+        }
+
+        function displayResults() {
+            // Actualizar resumen
+            document.getElementById('totalChecks').textContent = diagnosticResults.total;
+            document.getElementById('passedChecks').textContent = diagnosticResults.passed;
+            document.getElementById('failedChecks').textContent = diagnosticResults.failed;
+
+            // Mostrar resultados detallados
+            let html = '';
+
+            diagnosticResults.checks.forEach(section => {
+                html += `<div class="check-section">
+                    <h2>${section.title}</h2>`;
+
+                section.items.forEach(item => {
+                    html += `
+                        <div class="check-item">
+                            <span class="label">${item.label}</span>
+                            <span class="status ${item.status}">${item.message}</span>
+                        </div>`;
+                });
+
+                html += `</div>`;
+            });
+
+            // Agregar recomendaciones
+            if (diagnosticResults.failed > 0) {
+                html += `
+                    <div class="check-section" style="border-left-color: #eb3349;">
+                        <h2>⚠️ Recomendaciones</h2>
+                        <div class="details">
+                            <strong>Se encontraron ${diagnosticResults.failed} problema(s):</strong>
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li>Verifica que todos los archivos requeridos estén en el directorio correcto</li>
+                                <li>Asegúrate de tener conexión a internet para cargar las dependencias externas</li>
+                                <li>Revisa la consola del navegador (F12) para ver errores específicos</li>
+                                <li>Si falta el archivo escudo_ecuador.png, agrégalo o comenta la línea 42 en index.html</li>
+                            </ul>
+                        </div>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="check-section" style="border-left-color: #56ab2f;">
+                        <h2>✅ Sistema Listo</h2>
+                        <div class="details">
+                            <strong>¡Todas las verificaciones pasaron exitosamente!</strong>
+                            <p style="margin-top: 10px;">La aplicación está lista para funcionar correctamente.</p>
+                        </div>
+                    </div>`;
+            }
+
+            document.getElementById('results').innerHTML = html;
+        }
+
+        // Ejecutar diagnóstico al cargar la página
+        window.addEventListener('DOMContentLoaded', runDiagnostics);
+    </script>
+</body>
+</html>
