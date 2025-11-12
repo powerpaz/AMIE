@@ -47,7 +47,7 @@
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar">
-      <!-- Filtros Panel -->
+      <!-- Panel Filtros -->
       <div class="panel">
         <div class="panel-header">
           <h2 class="panel-title">
@@ -60,14 +60,13 @@
             <span class="status" id="status"></span>
           </div>
         </div>
-        
         <div class="panel-content">
           <div class="filters">
             <div class="filter-group">
               <label for="amieTxt">Código AMIE</label>
               <input id="amieTxt" type="text" class="input-field" placeholder="Ingrese código AMIE..."/>
             </div>
-            
+
             <div class="filter-row">
               <div class="filter-group">
                 <label for="provSel">Provincia</label>
@@ -82,7 +81,7 @@
                 </select>
               </div>
             </div>
-            
+
             <div class="filter-row">
               <div class="filter-group">
                 <label for="zonaSel">Zona</label>
@@ -116,13 +115,13 @@
                 Régimen
               </button>
             </div>
-            
+
             <div id="anioFilterDropdown" class="filter-dropdown hidden">
               <select id="anioSel" class="select-field">
                 <option value="">Todos los años</option>
               </select>
             </div>
-            
+
             <div id="regimenFilterDropdown" class="filter-dropdown hidden">
               <select id="regimenSel" class="select-field">
                 <option value="">Todos los regímenes</option>
@@ -130,7 +129,7 @@
                 <option value="SIERRA">Sierra</option>
               </select>
             </div>
-            
+
             <div class="filter-actions">
               <button id="btnLimpiar" class="btn-clear">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -140,7 +139,7 @@
                 Limpiar Filtros
               </button>
             </div>
-            
+
             <div class="data-source">
               <span class="source-label">Fuente:</span> Base de Datos Integrada AMIE
             </div>
@@ -148,7 +147,7 @@
         </div>
       </div>
 
-      <!-- Panel de Estadísticas (sin botón Exportar) -->
+      <!-- Panel de Estadísticas -->
       <div class="panel">
         <div class="panel-header">
           <h2 class="panel-title">
@@ -160,7 +159,6 @@
             Resumen de Inversión
           </h2>
         </div>
-        
         <div class="panel-content">
           <div class="stats-grid">
             <div class="stat-card">
@@ -172,7 +170,6 @@
               <div class="stat-value" id="totalInversion">$0</div>
             </div>
           </div>
-          
           <div class="rubros-container">
             <h3 class="rubros-title">Desglose por Rubro</h3>
             <table id="rubrosTable" class="rubros-table">
@@ -191,14 +188,14 @@
               </tfoot>
             </table>
           </div>
-          
           <div class="filters-status" id="filtrosActivos">
             Sin filtros activos
           </div>
         </div>
       </div>
     </aside>
-    <!-- Main Map Area -->
+
+    <!-- Área principal del mapa -->
     <main class="main-content">
       <header class="map-header">
         <div class="header-content">
@@ -219,5 +216,11 @@
       <div id="map" class="map-container"></div>
     </main>
   </div>
+
+  <!-- ===== Nuevo footer institucional ===== -->
+  <footer class="footer" style="background:#f9fafb;border-top:3px solid #1DB954;text-align:center;padding:10px 0;font-family:'Inter',sans-serif;font-size:13px;color:#555;margin-top:auto;">
+    <span>© DPI – MINEDEC | Datos: MINGOB / Elaboración DPI</span>
+  </footer>
+
 </body>
 </html>
