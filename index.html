@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Visor Geográfico Nacional - Sistema de Equipamiento Educativo</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" crossorigin="anonymous"/>
+  
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css"/>
+  
+  <!-- JavaScript Libraries -->
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+  <script defer src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js" crossorigin="anonymous"></script>
+  
+  <!-- Application Scripts -->
+  <script defer src="config.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+
+  <!-- ===== Encabezado institucional ===== -->
+  <header class="brand-bar" style="
+      position:sticky;top:0;z-index:10000;
+      display:flex;align-items:center;justify-content:space-between;
+      background:#fff;padding:10px 18px;
+      border-bottom:3px solid #1DB954;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <img src="logo.png" alt="Ministerio de Educación, Deporte y Cultura" style="height:52px;max-width:100%;object-fit:contain;">
+    </div>
+    <h1 style="margin:0;font:600 20px/1.2 'Inter',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0b3a6f;text-align:center;flex:1;">
+      Geovisor de Equipamiento Educativo – MINEDEC - Dirección de Educación Inicial y Básica
+    </h1>
+    <div style="display:flex;align-items:center;">
+      <img src="escudo_ecuador.png" alt="República del Ecuador" style="height:52px;max-width:100%;object-fit:contain;">
+    </div>
+  </header>
+  <!-- ===== Fin encabezado institucional ===== -->
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <!-- Panel Filtros -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+            </svg>
+            Filtros de Búsqueda
+          </h2>
+          <div class="status-container">
+            <span class="status" id="status"></span>
+          </div>
+        </div>
+        <div class="panel-content">
+          <div class="filters">
+            <div class="filter-group">
+              <label for="amieTxt">Código AMIE</label>
+              <input id="amieTxt" type="text" class="input-field" placeholder="Ingrese código AMIE..."/>
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="provSel">Provincia</label>
+                <select id="provSel" class="select-field">
+                  <option value="">Todas las provincias</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="cantSel">Cantón</label>
+                <select id="cantSel" class="select-field">
+                  <option value="">Todos los cantones</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <div class="filter-group">
+                <label for="zonaSel">Zona</label>
+                <select id="zonaSel" class="select-field">
+                  <option value="">Todas las zonas</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="nivelSel">Nivel de Educación</label>
+                <select id="nivelSel" class="select-field">
+                  <option value="">Todos los niveles</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="filter-buttons">
+              <button id="btnAnioFilter" class="btn-filter primary">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Año de Dotación
+              </button>
+              <button id="btnRegimenFilter" class="btn-filter primary">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                Régimen
+              </button>
+            </div>
+
+            <div id="anioFilterDropdown" class="filter-dropdown hidden">
+              <select id="anioSel" class="select-field">
+                <option value="">Todos los años</option>
+              </select>
+            </div>
+
+            <div id="regimenFilterDropdown" class="filter-dropdown hidden">
+              <select id="regimenSel" class="select-field">
+                <option value="">Todos los regímenes</option>
+                <option value="COSTA">Costa</option>
+                <option value="SIERRA">Sierra</option>
+              </select>
+            </div>
+
+            <div class="filter-actions">
+              <button id="btnLimpiar" class="btn-clear">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Limpiar Filtros
+              </button>
+            </div>
+
+            <div class="data-source">
+              <span class="source-label">Fuente:</span> Base de Datos Integrada AMIE
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel de Estadísticas -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+            Resumen de Inversión
+          </h2>
+        </div>
+        <div class="panel-content">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Instituciones</div>
+              <div class="stat-value" id="countInstituciones">0</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Inversión Total</div>
+              <div class="stat-value" id="totalInversion">$0</div>
+            </div>
+          </div>
+          <div class="rubros-container">
+            <h3 class="rubros-title">Desglose por Rubro</h3>
+            <table id="rubrosTable" class="rubros-table">
+              <thead>
+                <tr>
+                  <th>Concepto</th>
+                  <th>Monto (USD)</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot>
+                <tr>
+                  <td>Total General</td>
+                  <td id="totalCell">$0.00</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          <div class="filters-status" id="filtrosActivos">
+            Sin filtros activos
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Área principal del mapa -->
+    <main class="main-content">
+      <header class="map-header">
+        <div class="header-content">
+          <h1 class="map-title">Cronograma Val Presupuesto</h1>
+          <p class="map-subtitle">Material Lúdico, Mobiliario y Juegos Exteriores - Equipamiento Educativo</p>
+        </div>
+        <div class="legend">
+          <span class="legend-item">
+            <img src="https://maps.google.com/mapfiles/ms/icons/red-dot.png" alt="Costa" class="legend-icon">
+            Costa
+          </span>
+          <span class="legend-item">
+            <img src="https://maps.google.com/mapfiles/ms/icons/blue-dot.png" alt="Sierra" class="legend-icon">
+            Sierra
+          </span>
+        </div>
+      </header>
+      <div id="map" class="map-container"></div>
+    </main>
+  </div>
+
+  <!-- ===== Nuevo footer institucional ===== -->
+  <footer class="footer" style="background:#f9fafb;border-top:3px solid #1DB954;text-align:center;padding:10px 0;font-family:'Inter',sans-serif;font-size:13px;color:#555;margin-top:auto;">
+    <span>© DEIB – MINEDEC | Datos: DEIB/ Elaborado por la DPI</span>
+  </footer>
+
+</body>
+</html>
