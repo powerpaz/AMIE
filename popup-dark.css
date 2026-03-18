@@ -1,0 +1,312 @@
+/* ==============================================
+   ESTILOS DE POPUP - MODO OSCURO MODERNO
+   ============================================== */
+
+.leaflet-popup {
+  margin-bottom: 20px;
+}
+
+.leaflet-popup-content-wrapper {
+  background: linear-gradient(145deg, #1a1f2e, #2a2f3e);
+  border: 1px solid #00ff88;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.3);
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+  min-width: 380px;
+  max-width: 450px;
+  font-size: 14px;
+  color: #e0e0e0;
+}
+
+.leaflet-popup-tip {
+  background: #2a2f3e;
+  border: 1px solid #00ff88;
+  box-shadow: 0 4px 8px rgba(0, 255, 136, 0.2);
+}
+
+/* Header del Popup */
+.popup-header {
+  background: linear-gradient(90deg, #00ff88 0%, #00d4aa 100%);
+  padding: 15px 20px;
+  border-radius: 12px 12px 0 0;
+  position: relative;
+}
+
+.popup-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1f2e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.popup-header .popup-amie {
+  display: inline-block;
+  background: rgba(26, 31, 46, 0.9);
+  color: #00ff88;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  margin-top: 8px;
+  font-weight: 500;
+  border: 1px solid #00ff88;
+}
+
+/* Body del Popup */
+.popup-body {
+  padding: 20px;
+  background: #1a1f2e;
+}
+
+/* Secciones */
+.popup-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: rgba(42, 47, 62, 0.5);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.popup-section:last-child {
+  margin-bottom: 0;
+}
+
+.popup-section h4 {
+  margin: 0 0 12px 0;
+  color: #00ff88;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+/* Tabla de información en filas */
+.popup-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.popup-info-row:last-child {
+  border-bottom: none;
+}
+
+.popup-label {
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+  flex: 0 0 140px;
+}
+
+.popup-value {
+  color: #e0e0e0;
+  font-size: 12px;
+  flex: 1;
+  text-align: right;
+  font-weight: 400;
+}
+
+.popup-value.highlight {
+  color: #00ff88;
+  font-weight: 600;
+}
+
+/* Valores monetarios especiales */
+.popup-money {
+  color: #00ff88;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+/* Estados y badges */
+.popup-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.popup-badge.success {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+  border: 1px solid #00ff88;
+}
+
+.popup-badge.warning {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid #ffc107;
+}
+
+.popup-badge.info {
+  background: rgba(0, 123, 255, 0.2);
+  color: #007bff;
+  border: 1px solid #007bff;
+}
+
+/* Sección de KPIs / Métricas */
+.popup-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.popup-metric {
+  background: rgba(0, 255, 136, 0.1);
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.popup-metric-label {
+  color: #9ca3af;
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.popup-metric-value {
+  color: #00ff88;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Footer del popup */
+.popup-footer {
+  padding: 12px 20px;
+  background: rgba(42, 47, 62, 0.5);
+  border-top: 1px solid rgba(0, 255, 136, 0.2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.popup-coordinates {
+  font-size: 11px;
+  color: #9ca3af;
+  font-family: 'Courier New', monospace;
+}
+
+/* Animaciones */
+.leaflet-popup {
+  animation: popupFadeIn 0.3s ease-out;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hover effects */
+.popup-info-row:hover {
+  background: rgba(0, 255, 136, 0.05);
+  transition: background 0.2s ease;
+}
+
+/* Scrollbar personalizado para el popup */
+.popup-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.popup-body::-webkit-scrollbar-track {
+  background: rgba(42, 47, 62, 0.5);
+  border-radius: 3px;
+}
+
+.popup-body::-webkit-scrollbar-thumb {
+  background: #00ff88;
+  border-radius: 3px;
+}
+
+.popup-body::-webkit-scrollbar-thumb:hover {
+  background: #00d4aa;
+}
+
+/* Estilos para sección de presupuesto */
+.popup-budget-section {
+  background: linear-gradient(145deg, rgba(0, 255, 136, 0.1), rgba(0, 212, 170, 0.1));
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #00ff88;
+  margin-top: 15px;
+}
+
+.popup-budget-title {
+  color: #00ff88;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.popup-budget-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.popup-budget-item {
+  text-align: center;
+  padding: 8px;
+  background: rgba(26, 31, 46, 0.8);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.popup-budget-year {
+  color: #9ca3af;
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.popup-budget-amount {
+  color: #00ff88;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Total destacado */
+.popup-total {
+  background: linear-gradient(90deg, rgba(0, 255, 136, 0.2), rgba(0, 212, 170, 0.2));
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 15px;
+  border: 2px solid #00ff88;
+  text-align: center;
+}
+
+.popup-total-label {
+  color: #e0e0e0;
+  font-size: 12px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.popup-total-amount {
+  color: #00ff88;
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+}
